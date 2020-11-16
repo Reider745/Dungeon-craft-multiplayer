@@ -1,0 +1,23 @@
+{
+	"format_version": "1.8.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "dc:boss0",
+			"materials": {
+				"default": "boss0"
+			},
+			"textures": {
+				"default": "textures/entity/Boss_0"
+			},
+			"animations": "iD",
+			"animation_controllers": "iD",
+			"geometry": {
+				"default": "geometry.boss"
+			},
+			"render_controllers": [
+				"controller.render.default"
+			],
+			"enable_attachables": true
+		}
+	}
+}

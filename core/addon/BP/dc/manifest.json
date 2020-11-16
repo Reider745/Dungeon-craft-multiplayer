@@ -1,0 +1,35 @@
+{
+	"format_version": 1,
+	"header": {
+		"name": "Dungeon craft",
+		"description": "установите этот АДДОН!",
+		"uuid": "11b6a792-b7d5-4b78-a67d-54e4c834142d",
+		"version": [
+			0,
+			0,
+			1
+		]
+	},
+	"modules": [
+		{
+			"description": "Dungeon craft",
+			"type": "data",
+			"uuid": "8302485e-24d6-472f-be1f-b31b67314c25",
+			"version": [
+				0,
+				0,
+				1
+			]
+		}
+	],
+	"dependencies": [
+		{
+			"uuid": "fe8f2f5e-eb2d-4a68-a2bc-67bacae98e8d",
+			"version": [
+				0,
+				0,
+				1
+			]
+		}
+	]
+}

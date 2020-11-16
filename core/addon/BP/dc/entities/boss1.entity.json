@@ -1,0 +1,148 @@
+{
+	"format_version": "1.8.0",
+	"minecraft:entity": {
+		"description": {
+			"identifier": "dc:boss1",
+			"is_spawnable": false,
+			"is_summonable": true,
+			"is_experimental": false
+		},
+		"components": {
+			"minecraft:type_family": {
+				"family": [
+					"zombie"
+				]
+			},
+			"minecraft:collision_box": {
+				"width": 2,
+				"height": 3
+			},
+			"minecraft:silverfish_angry": {
+				"minecraft:angry": {
+					"duration": -1,
+					"broadcastAnger": true,
+					"broadcastRange": 30,
+					"calm_event": {
+						"event": "minecraft:on_calm",
+						"target": "self"
+					}
+				}
+			},
+			"minecraft:behavior.random_stroll": {
+				"priority": 1,
+				"speed_multiplier": 0.5
+			},
+			"minecraft:navigation.walk": {
+				"is_amphibious": true,
+				"can_path_over_water": true,
+				"can_pass_doors": true,
+				"can_open_doors": false,
+				"avoid_damage_blocks": false
+			},
+    "minecraft:ranged_attack": {
+        "minecraft:behavior.ranged_attack": {
+          "attack_interval_min": 1,
+          "attack_interval_max": 3,
+          "attack_radius": 15
+        },
+        "minecraft:shooter": {
+          "type": "Arrow",
+          "def": "minecraft:arrow"
+        },
+        "minecraft:environment_sensor": {
+          "on_environment": {
+            "filters": {
+              "test": "is_underwater",
+              "subject": "self",
+              "operator": "==",
+              "value": true
+            },
+            "event": "minecraft:melee_mode"
+          }
+        }
+      },
+			"minecraft:behavior.melee_attack": {
+				"priority": 1,
+				"speed_multiplier": 1,
+				"track_target": true
+			},
+			"minecraft:attack": {
+				"damage": 8
+			},
+			"minecraft:health": {
+				"value": 200,
+				"max": 200
+			},
+			"minecraft:loot": {
+				"table": "loot_tables/entities/undefined"
+			},
+			"minecraft:nameable": {},
+			"minecraft:movement.basic": {},
+			"minecraft:jump.static": {},
+			"minecraft:movement": {
+				"value": 0
+			},
+			"minecraft:behavior.nearest_attackable_target": {
+				"priority": 2,
+				"entity_types": [
+					{
+						"filters": {
+							"any_of": [
+								{
+									"test": "is_family",
+									"subject": "other",
+									"value": "player"
+								},
+								{
+									"test": "is_family",
+									"subject": "other",
+									"value": "snowgolem"
+								},
+								{
+									"test": "is_family",
+									"subject": "other",
+									"value": "irongolem"
+								}
+							]
+						},
+						"max_dist": 30,
+						"attack_interval": 5
+					}
+				]
+			},
+			"minecraft:physics": {}
+		},
+		"events": {
+
+      "minecraft:entity_spawned": {
+
+        "add": {
+
+          "component_groups": [
+
+            "minecraft:ranged_attack"
+
+          ]
+
+        }
+
+      },
+
+      "minecraft:melee_mode": {
+
+        "remove": { "component_groups": [ "minecraft:ranged_attack" ] },
+
+        "add": { "component_groups": [ "minecraft:melee_attack" ] }
+
+      },
+
+      "minecraft:ranged_mode": {
+
+        "remove": { "component_groups": [ "minecraft:melee_attack" ] },
+
+        "add": { "component_groups": [ "minecraft:ranged_attack" ] }
+
+      }
+    }
+	}
+}
