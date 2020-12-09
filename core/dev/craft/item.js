@@ -6,22 +6,15 @@ Recipes.addShaped({id: ItemID.stick2, count: 1, data: 0},
 	['a', BlockID.blockmetal, 0, 'b', 280, 0]);
 
 
-Recipes.addShaped({id: ItemID.rune0, count: 4, data: 0},
+Recipes.addShaped({id: ItemID.Drune0, count: 4, data: 0},
 	["***", "*b*", "***"], 
 	['b', BlockID.altar, 0]);
 
 
-Recipes.addShaped({id: ItemID.item, count: 1, data: 0}, 
+Recipes.addShaped({id: ItemID.RitualActivator, count: 1, data: 0}, 
 	["*a*", "a*a", "*a*"], 
 	['a', ItemID.clitok, 0]
 ); 
-
-
-Recipes.addShaped({id: ItemID.gotovka, count: 1, data: 0}, 
-	["aaa", "a*a", "*a*"], 
-	['a', ItemID.clitok, 0] 
-);
-
 
 Recipes.addShaped({id: ItemID.armor5, count: 1, data: 0}, 
 	["aaa", "a*a", "***"], 

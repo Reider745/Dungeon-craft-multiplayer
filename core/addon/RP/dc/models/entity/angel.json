@@ -1,0 +1,52 @@
+{
+	"format_version": "1.10.0",
+	"geometry.angel": {
+		"texturewidth": 64,
+		"textureheight": 64,
+		"visible_bounds_width": 2,
+		"visible_bounds_height": 2.5,
+		"visible_bounds_offset": [0, 0.75, 0],
+		"bones": [
+			{
+				"name": "bone",
+				"pivot": [-3, 18, 0],
+				"cubes": [
+					{"origin": [-3, 6, -2], "size": [5, 13, 3], "uv": [0, 10]}
+				]
+			},
+			{
+				"name": "bone2",
+				"parent": "bone",
+				"pivot": [-3, 18, 0],
+				"cubes": [
+					{"origin": [-3, 4, 0], "size": [5, 1, 2], "uv": [0, 29]},
+					{"origin": [-2, 3, 1], "size": [3, 1, 2], "uv": [0, 32]},
+					{"origin": [-3, 5, -1], "size": [5, 1, 2], "uv": [0, 26]}
+				]
+			},
+			{
+				"name": "bone3",
+				"pivot": [-3, 18, 0],
+				"rotation": [-7.5, 0, 0],
+				"cubes": [
+					{"origin": [-5, 8, -2], "size": [2, 11, 3], "uv": [16, 10]}
+				]
+			},
+			{
+				"name": "bone4",
+				"pivot": [0, 11, -1],
+				"rotation": [-7.5, 0, 0],
+				"cubes": [
+					{"origin": [2, 8, -3], "size": [2, 11, 3], "uv": [26, 10]}
+				]
+			},
+			{
+				"name": "bone5",
+				"pivot": [0, 0, 0],
+				"cubes": [
+					{"origin": [-3, 19, -3], "size": [5, 5, 5], "uv": [0, 0]}
+				]
+			}
+		]
+	}
+}

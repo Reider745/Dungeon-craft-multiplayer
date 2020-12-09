@@ -30,17 +30,19 @@ TileEntity.registerPrototype(BlockID.manaStorage, {
          if(this.data.mode=="accumulate"){
              let mana = ManaCore.get(this.data.player);
              if(this.data.manaStorage<=19999){
-                 mana.count--;
-                 this.data.manaStorage++;
-                 ManaCore.set(this.data.player, mana);
-                 let pos = Entity.getPosition(this.data.player);
-                 ParticlesAPI.coords("rai_particle", 40, [3,3], pos.x, pos.y, pos.z, this.x, this.y, this.z);
+                 if(mana.count>=1){
+                     mana.count--;
+                     this.data.manaStorage++;
+                     ManaCore.set(this.data.player, mana);
+                     let pos = Entity.getPosition(this.data.player);
+                     ParticlesAPI.coords("rai_particle", 40, [3,3], pos.x, pos.y, pos.z, this.x, this.y, this.z);
+                 }
              }
          }
      },
      click: function(id, count, data, coords, player){
          if(Entity.getSneaking(player)==true){
-             Game.message("mana: " + this.data.manaStorage + ";");
+             Mp.message(player,  "mana: " + this.data.manaStorage + ";");
          }else{
              if(this.data.player != player){
                  this.data.player = player;
@@ -81,7 +83,12 @@ var modelAPI2 = new BlockRenderer.Model(mesh2);
 
            renderAPI2.addEntry(modelAPI2);
 mesh2.importFromFile(__dir__ + "/res/model/magis_storage.obj", "obj", null);
-mesh2.setBlockTexture("block", 0);
+mesh2.setBlockTexture("storage-mana", 0);
+
+ItemModel.getFor(BlockID.manaStorage, 0).setModUiSpriteName("storage-mana", 0);
+
+
+
 
 
 

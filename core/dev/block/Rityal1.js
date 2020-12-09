@@ -32,20 +32,22 @@ model1.addBox (0/16, 0, 0/16, 16/16, 0.50, 16/16, BlockID.ritualGL, 0);
 
 var Ritual = {};
 Ritual.arr1 = [];
-Ritual.addCraft1 = function (id, obj){
-    Ritual.arr1.push({id: id, obj: obj});
+Ritual.addCraft1 = function (id, obj, func){
+    Ritual.arr1.push({id: id, obj: obj, func: func});
 };
-Ritual.addCraft1(264, {
-    xp: 263,
-    xm: 263,
-    zp: 263,
-    zm: 263,
-    mana: 1000
-})
-
+Ritual.get1 = function (it){
+    for(var i in Ritual.arr1){
+        if(Ritual.arr1[i].id == it){
+            return Ritual.arr1[i];
+        }else{
+            return {id: 0, obj: {xp: 0, xm: 0, zp: 0, zm: 0, mana: 0}, func: function(player, x, y, z){}};
+        }
+    }
+};
 TileEntity.registerPrototype(BlockID.statua, {
     defaultValues: {
         active: false,
+        mana: 0, 
         player: null
     },
     check: function (id, x, y, z){
@@ -95,14 +97,55 @@ TileEntity.registerPrototype(BlockID.statua, {
         }
         return mana;
     },
+    getCountStorage: function (){
+        let count = 0;
+        if(this.blockSource.getBlockId(this.x+2, this.y-1, this.z+2)==BlockID.manaStorage){
+            if(TileEntity.getTileEntity(this.x+2, this.y-1, this.z+2, this.blockSource).data.manaStorage>=1){
+                count++;
+            }
+        }
+        if(this.blockSource.getBlockId(this.x-2, this.y-1, this.z+2)==BlockID.manaStorage){
+            if(TileEntity.getTileEntity(this.x-2, this.y-1, this.z+2, this.blockSource).data.manaStorage>=1){
+                count++;
+            }
+        }
+        if(this.blockSource.getBlockId(this.x+2, this.y-1, this.z-2)==BlockID.manaStorage){
+            if(TileEntity.getTileEntity(this.x+2, this.y-1, this.z-2, this.blockSource).data.manaStorage>=1){
+                count++;
+            }
+        }
+        if(this.blockSource.getBlockId(this.x-2, this.y-1, this.z-2)==BlockID.manaStorage){
+            if(TileEntity.getTileEntity(this.x-2, this.y-1, this.z-2, this.blockSource).data.manaStorage>=1){
+                count++;
+            }
+        }
+        return count;
+    },
+    delMana: function (x, y, z){
+        if(this.blockSource.getBlockId(x, y, z)==BlockID.manaStorage){
+            ParticlesAPI.coords("mana", 40, [3,3], x, y, z, this.x, this.y, this.z);
+            let te = TileEntity.getTileEntity(x, y, z, this.blockSource);
+            let mana = this.data.mana / this.getCountStorage();
+            if(this.data.mana<=te.data.manaStorage){
+                te.data.manaStorage = 0;
+                this.data.mana = 0;
+            }else{
+                te.data.manaStorage = 0;
+                this.data.mana = 0;
+            }
+            
+        }
+    },
     tick: function (){
         if(this.data.player){
             for(i in Ritual.arr1){
                 let obj = Ritual.arr1[i].obj;
+                let func = Ritual.arr1[i].func;
                 if(this.check(obj.xp, this.x+2, this.y-1, this.z)){
                     if(this.check(obj.xm, this.x-2, this.y-1, this.z)){
                         if(this.check(obj.zp, this.x, this.y-1, this.z+2)){
                             if(this.check(obj.zm, this.x, this.y-1, this.z-2)){
+                                if(this.blockSource.getBlockId(this.x, this.y-1, this.z)==BlockID.ritualGL){
                                 this.manaAdd(this.x+2, this.y-1, this.z+2);
                                 this.manaAdd(this.x-2, this.y-1, this.z+2);
                                 this.manaAdd(this.x+2, this.y-1, this.z-2);
@@ -111,35 +154,28 @@ TileEntity.registerPrototype(BlockID.statua, {
                                 ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x-2, this.y, this.z, this.x, this.y, this.z);
                                 ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x, this.y, this.z+2, this.x, this.y, this.z);
                                 ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x, this.y, this.z-2, this.x, this.y, this.z);
-                                let mana = this.getMana();
-                                if(mana>=obj.mana){
-                                    if(this.blockSource.getBlockId(this.x+2, this.y-1, this.z+2)==BlockID.manaStorage){
-                                        ParticlesAPI.coords("mana", 40, [3,3], this.x+2, this.y, this.z+2, this.x, this.y, this.z);
-            TileEntity.getTileEntity(this.x+2, this.y-1, this.z+2, this.blockSource).data.manaStorage = 0;
-        }
-        if(this.blockSource.getBlockId(this.x-2, this.y-1, this.z+2)==BlockID.manaStorage){
-            ParticlesAPI.coords("mana", 40, [3,3], this.x-2, this.y, this.z+2, this.x, this.y, this.z);
-            TileEntity.getTileEntity(this.x-2, this.y-1, this.z+2, this.blockSource).data.manaStorage = 0;
-        }
-        if(this.blockSource.getBlockId(this.x+2, this.y-1, this.z-2)==BlockID.manaStorage){
-            ParticlesAPI.coords("mana", 40, [3,3], this.x+2, this.y, this.z-2, this.x, this.y, this.z);
-            TileEntity.getTileEntity(this.x+2, this.y-1, this.z-2, this.blockSource).data.manaStorage = 0;
-        }
-        if(this.blockSource.getBlockId(this.x-2, this.y-1, this.z-2)==BlockID.manaStorage){
-            ParticlesAPI.coords("mana", 40, [3,3], this.x-2, this.y, this.z-2, this.x, this.y, this.z);
-            TileEntity.getTileEntity(this.x-2, this.y-1, this.z-2, this.blockSource).data.manaStorage = 0;
-        }
+                                this.data.mana = this.getMana();
+                                if(this.data.mana>=obj.mana){
+                                    this.delMana(this.x+2, this.y-1, this.z+2);
+                                    this.delMana(this.x-2, this.y-1, this.z+2);
+                                    this.delMana(this.x+2, this.y-1, this.z-2);
+                                    this.delMana(this.x-2, this.y-1, this.z-2);
+                                    
         TileEntity.getTileEntity(this.x, this.y-1, this.z-2, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x, this.y-1, this.z+2, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x+2, this.y-1, this.z, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x-2, this.y-1, this.z, this.blockSource).destroyAnimation();
         this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, Ritual.arr1[i].id, 1, 0, null);
         this.blockSource.spawnEntity(this.x, this.y+1, this.z, 93);
+        func(this.data.player, this.x, this.y, this.z);
+        this.data.active = false;
+            this.data.player = null;
                                 }
                             }
                         }
                     }
                 }
+            }
             }
         }
     }

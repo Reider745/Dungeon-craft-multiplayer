@@ -6,7 +6,7 @@ Network.addClientPacket("dc.message", function(packetData) {
 });
 var Mp = {
     message: function (player, text){
-        let client = Network.getClientForPlayer(player);
+        var client = Network.getClientForPlayer(player);
         if(client != null){
             client.send("dc.message", text);
             Debug.message("message player - "+player+" text: "+text);
@@ -15,19 +15,15 @@ var Mp = {
         }
     },
     spawnParticle: function (type, x, y, z, vx, vy, vz){
-        let players = Network.getConnectedPlayers();
-        for(i in players){
-            let client = Network.getClientForPlayer(players[i]);
-            if(client != null){
+        var players = Network.getConnectedPlayers();
+        for(var i in players){
+            var client = Network.getClientForPlayer(players[i]);
+            if(client){
                 client.send("dc.particle", {p: type, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz});
                 Debug.message("spawn particle");
             }else{
-                Debug.message("[error]message player - "+player);
+                Debug.message("[error]spawn particle");
             }
         }
     }
 };
-
-
-
-

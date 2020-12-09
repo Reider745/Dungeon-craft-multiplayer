@@ -7,7 +7,7 @@ Network.addClientPacket("dc.read", function(packetData) {
     manaPlayer = packetData;
 });
 Callback.addCallback("PlayerChangedDimension", function(player, currentId, lastId){
-    ManaCore.read(player);
+    //ManaCore.read(player);
 });
 Saver.addSavesScope("mana",
     function read(scope) {
@@ -58,6 +58,7 @@ var ManaCore = {
     },
     set: function (player, obj){
         if(manaPlayer[player]){
+            Callback.invokeCallback("wasteMana", player, this.get(player), obj);
             Debug.message("set mana player - "+player+" "+JSON.stringify(obj, null, true));
             manaPlayer[player] = obj;
             Network.sendToServer("dc.set", manaPlayer);

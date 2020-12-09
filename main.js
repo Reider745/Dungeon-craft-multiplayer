@@ -1,7 +1,7 @@
 /*
 BUILD INFO:
   dir: core/dev
-  target: mainDC.js
+  target: main.js
   files: 40
 */
 
@@ -255,6 +255,7 @@ var ManaCore = {
     },
     set: function (player, obj){
         if(manaPlayer[player]){
+            Callback.invokeCallback("wasteMana", player, this.get(player), obj);
             Debug.message("set mana player - "+player+" "+JSON.stringify(obj, null, true));
             manaPlayer[player] = obj;
             Network.sendToServer("dc.set", manaPlayer);
