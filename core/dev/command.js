@@ -1,12 +1,12 @@
 function getPlayer(name){
     let arr = Network.getConnectedPlayers();
-    for(i in arr){
+    for(let i in arr){
         if(Entity.getNameTag(arr[i])==name){
             return arr[i];
         }
     }
 }
-if(__config__.getBool("debug.active")){
+if(config.debug.command && config.debug.enabled){
     Callback.addCallback("NativeCommand", function (src){
         let arr = src.split(" ");
         if(arr[0] == "/mana"){
@@ -20,6 +20,7 @@ if(__config__.getBool("debug.active")){
                         }
                         mana.count = parseInt(arr[3]);
                         Mp.message(player, "вам установлено количество маны - "+arr[3]);
+                        ManaCore.set(player, mana);
                         Game.prevent();
                     }
                 }
@@ -34,6 +35,7 @@ if(__config__.getBool("debug.active")){
                         }
                         mana.countMax = parseInt(arr[3]);
                         Mp.message(player, "вам установлено максимальное количество маны - "+arr[3]);
+                        ManaCore.set(player, mana);
                    }
                 }
             }
@@ -43,6 +45,7 @@ if(__config__.getBool("debug.active")){
                         let player = getPlayer(arr[2]);
                         ManaCore.create(player);
                         Mp.message(player, "у вас было удалено сохранение маны");
+                        ManaCore.set(player, mana);
                     }
                 }
             }

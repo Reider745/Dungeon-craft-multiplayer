@@ -138,7 +138,7 @@ TileEntity.registerPrototype(BlockID.statua, {
     },
     tick: function (){
         if(this.data.player){
-            for(i in Ritual.arr1){
+            for(let i in Ritual.arr1){
                 let obj = Ritual.arr1[i].obj;
                 let func = Ritual.arr1[i].func;
                 if(this.check(obj.xp, this.x+2, this.y-1, this.z)){
@@ -165,7 +165,10 @@ TileEntity.registerPrototype(BlockID.statua, {
         TileEntity.getTileEntity(this.x, this.y-1, this.z+2, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x+2, this.y-1, this.z, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x-2, this.y-1, this.z, this.blockSource).destroyAnimation();
-        this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, Ritual.arr1[i].id, 1, 0, null);
+       
+Callback.invokeCallback("RitualDC", this.data.player, "statua", {x: this.x, y: this.y, z: this.z});
+
+ this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, Ritual.arr1[i].id, 1, 0, null);
         this.blockSource.spawnEntity(this.x, this.y+1, this.z, 93);
         func(this.data.player, this.x, this.y, this.z);
         this.data.active = false;
@@ -195,7 +198,7 @@ renderAPI.setGlblock1(BlockID.gubok2);
 Translation.addTranslation("Cruster's growth controller", {ru: "Контроллер роста криссталов"});
 Ritual.arr2 = [];
 Ritual.addGrowth = function (id){
-    
+    Ritual.arr2.push(id);
 }
 TileEntity.registerPrototype(BlockID.gubok2, {
     defaultValues: {
@@ -212,7 +215,8 @@ TileEntity.registerPrototype(BlockID.gubok2, {
                     if(this.blockSource.getBlockId(this.x-2, this.y+1, this.z-2)==id){
                         if(this.blockSource.getBlockId(this.x, this.y+1, this.z)==0){
                         if(this.data.progres>=200){
-                          this.data.progres = 0;!
+Callback.invokeCallback("RitualDC", player, "cristal", {x: this.x, y: this.y, z: this.z});
+                          this.data.progres = 0;
                            ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x+2, this.y+1, this.z+2, this.x, this.y+1, this.z);
                            ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x-2, this.y+1, this.z+2, this.x, this.y+1, this.z);
                            ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x+2, this.y+1, this.z-2, this.x, this.y+1, this.z);
@@ -236,6 +240,8 @@ TileEntity.registerPrototype(BlockID.gubok2, {
         }
     },
     tick: function (){
-        this.check(1);
+        for(var i in Ritual.arr2){
+            this.check(Ritual.arr2[i]);
+        }
     }
 })

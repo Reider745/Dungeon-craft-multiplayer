@@ -62,12 +62,17 @@ ManaCore.set(player, mana);
 }
 );
 
+Recipes.addShaped({id: ItemID.Scroll4, count: 1, data: 0},
+	["**b", "*a*", "b**"], 
+	['a', 340, 0, 'b', 87, 0]);
+
 Item.addCreativeGroup("sroll", Translation.translate("Sroll"), [
 	ItemID.Scroll6,
  ItemID.Scroll2, 
  ItemID.Scroll4, 
  ItemID.Scroll1,
 ]);
+
 
 
 

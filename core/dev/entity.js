@@ -16,6 +16,7 @@ Callback.addCallback("EntityInteract", function (entity, player) {
         for(i in Entity.tradeArr){
             let obj = Entity.tradeArr[i];
             if(item.id == obj.item.id && item.count >= obj.item.count){
+                if(DA) ac.give(player,  "DungeonAchievement", "trade");
                 let count = Math.floor(Math.random()*(obj.count.min))+obj.count.min;
                 bs.spawnDroppedItem(coords.x, coords.y, coords.z, obj.result.id, count, obj.result.data, null);
                 delItem(player, {id: obj.item.id, count: item.count-(obj.item.count-1), data: obj.item.data});

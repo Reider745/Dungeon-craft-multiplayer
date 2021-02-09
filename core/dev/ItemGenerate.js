@@ -15,12 +15,58 @@ Item2.addItem(322, 0.1, {max:1});
 Item2.addItem(ItemID.Gem, 0.3, {max:1});
 Item2.addItem(ItemID.Gem2, 0.08, {max:1});
 Item2.addItem(ItemID.manysript1, 0.05, {max:1});
+
+
 var date = new Date();
 if(date.getMonth()==0 && date.getDate()>=1 && date.getDate() <= 10){
+
+
+    let biome = [12, 13, 26, 30, 31, 34, 140, 158];
+    let ng = new ItemGenerate();
+    ng.addItem(264, 0.3, {max:3});
+    ng.addItem(266, 0.5, {max:5});
+    ng.addItem(265, 1, {max:10});
+    ng.addItem(80, 1, {max:10});
+    ng.addItem(ItemID.koin_0, 0.2, {max:1});
+    ng.addItem(ItemID.koin_1, 0.1, {max:1});
+
+    Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+for(let i in biome){
+if (Math.random()*100 <= 0.4){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+if(BlockSource.getCurrentWorldGenRegion().getBiome(coords.x, coords.z) == biome[i]){
+
+(new DungeonAPI("нг1.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+ng.fillChest(coords.x, coords.y+1, coords.z, 0, id);
+}
+}
+}
+});
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+for(let i in biome){
+if (Math.random()*100 <= 0.3){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+if(BlockSource.getCurrentWorldGenRegion().getBiome(coords.x, coords.z) == biome[i]){
+
+(new DungeonAPI("нг2.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+ng.fillChest(coords.x, coords.y+1, coords.z+1, 0, id);
+ng.fillChest(coords.x, coords.y+1, coords.z+2, 0, id);
+}
+}
+}
+});
+
+    
     IDRegistry.genItemID("present"); 
 Item.createItem("present", "present", {name: "present", meta: 0}, {stack: 1});
     Translation.addTranslation("present", {ru: "подарок"});
         Item2.addItem(ItemID.present, 0.1, {max:1});
+        ng.addItem(ItemID.present, 0.3, {max:1});
+        ng.registerRecipeViewer("Generate6", "генерация предметов");
     let arrPresent = [];
     let Present = {
         add: function (obj){
@@ -75,7 +121,8 @@ let Item3 = new ItemGenerate();
 Item3.addItem(264, 0.3, {max:5});
 Item3.addItem(265, 1, {max:3});
 Item3.addItem(ItemID.koin_0, 0.1, {max:2});
-Item3.addItem(ItemID.koin_1, 0.01, {max:1})
+Item3.addItem(ItemID.koin_1, 0.01, {max:1});
+Item3.addItem(ItemID.bookxp, 0.01, {max: 2})
 //железо
 Item3.addItem(306, 0.15, {max:1});
 Item3.addItem(307, 0.08, {max:1});
@@ -102,7 +149,7 @@ Item3.registerRecipeViewer("Generate3", "генерация предметов")
 let Item5 = new ItemGenerate();
 Item5.addItem(264, 0.3, {max:3});
 Item5.addItem(266, 0.5, {max:5});
-Item5.addItem(265, 0.4, {max:10});
+Item5.addItem(265, 1, {max:10});
 Item5.addItem(372, 0.10, {max:5});
 Item5.addItem(384, 0.10, {max:11});
 Item5.addItem(399, 0.01, {max:1});
@@ -111,18 +158,13 @@ Item5.registerRecipeViewer("Generate5", "генерация предметов")
 
 let Item6 = new ItemGenerate();
 Item6.addItem(264, 0.1, {max:5});
-
 Item6.addItem(266, 0.4, {max:7});
-
 Item6.addItem(295, 0.8, {max:20});
-
 Item6.addItem(291, 0.9, {max:1});
-
 Item6.addItem(261, 0.8, {max:1});
-
 Item6.addItem(262, 0.4, {max:20});
-
 Item6.addItem(297, 0.8, {max:6});
-
 Item6.addItem(322, 0.05, {max:10});
+Item6.addItem(ItemID.sorcererStaff, 0.1, {max: 1});
+Item6.addItem(ItemID.idal, 0.05, {max:10});
 Item6.registerRecipeViewer("Generate6", "генерация предметов");

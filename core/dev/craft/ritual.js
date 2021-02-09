@@ -6,6 +6,11 @@ Callback.addCallback("ModsLoaded", function () {
     Ritual.addCraft3(ItemID.Drune0, ItemID.Drune2);
     Ritual.addCraft3(ItemID.Drune0, ItemID.Drune3);
     Ritual.addCraft3(ItemID.Drune0, ItemID.Drune4);
+    Ritual.register3(ItemID.idal, 5000);
+    Ritual.addCraft3(ItemID.idal, ItemID.idalSave);
+    Ritual.addCraft3(ItemID.idal, ItemID.idalGifts);
+
+
     
     Ritual.addCraft2(ItemID.armor5, ItemID.armor1, 40000);
     Ritual.addCraft2(ItemID.armor6, ItemID.armor2, 40000);
@@ -52,7 +57,7 @@ Callback.addCallback("ModsLoaded", function () {
          }
          ManaCore.set(player, mana);
      });
-     Ritual.addCraft1(ItemID.poic1, {
+     /*Ritual.addCraft1(ItemID.poic1, {
         xp: ItemID.gotovka,
         xm: ItemID.Gem,
         zp: ItemID.clitok,
@@ -79,7 +84,7 @@ Callback.addCallback("ModsLoaded", function () {
         xp: ItemID.clitok,
         xm: ItemID.clitok,
         mana: 5000
-     }, function(player, x, y, z){});
+     }, function(player, x, y, z){});*/
      Ritual.addCraft1(ItemID.clitok, {
         zp: ItemID.crystalearth,
         zm: ItemID.crystalearth,
@@ -115,4 +120,9 @@ Callback.addCallback("ModsLoaded", function () {
         zm: ItemID.clitok,
         mana: 5000
      }, function(player, x, y, z){});
+     
+     Ritual.addGrowth(BlockID.kristalFire);
+     Ritual.addGrowth(BlockID.kristaldirt);
+     Ritual.addGrowth(BlockID.kristalwind);
+     Ritual.addGrowth(BlockID.kristalLight);
 });

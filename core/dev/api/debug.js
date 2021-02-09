@@ -1,9 +1,9 @@
 var Debug = {
     lines: 0,
     message: function (text){
-        if(__config__.getBool("debug.active")){
+        if(config.debug.enabled && config.debug.log){
             this.lines += 1;
-            if(this.lines >= __config__.getNumber("debug.lines")){
+            if(this.lines >= config.debug.numberOfLines){
                 this.lines = 0;
                 this.clear();
             }

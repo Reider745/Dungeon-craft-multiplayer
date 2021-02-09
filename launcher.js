@@ -1,6 +1,6 @@
 ConfigureMultiplayer({
     name: "dc", 
-    version: "alpha 0.1", 
+    version: "0.8", 
     isClientOnly: false
 });
 Launch();

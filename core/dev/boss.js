@@ -1,31 +1,6 @@
-function arrow(ent){
-    let v = Entity.getVelocity(ent);
-    let pos = Entity.getPosition(ent);
-    let b = BlockSource.getDefaultForDimension(Entity.getDimension(ent))
-    Entity.moveToAngle(Entity.spawn(pos.x, pos.y + 4, pos.z, 80), Entity.getLookAngle(ent), {speed: 1});
-}
-function tnt(ent){
-    let pos = Entity.getPosition(ent);
-    pos.x += (Math.random()*10)-(Math.random()*10);
-    pos.z += (Math.random()*10)-(Math.random()*10);
-    Entity.spawn(pos.x, pos.y+8, pos.z, 65);
-}
 Item.registerUseFunction("glas", function(coords, item, block, player)
 {
 let b = BlockSource.getDefaultForActor(player);
-let boss = b.spawnEntity(coords.x, coords.y, coords.z, "dc:boss1");
-
-Entity.setPrototype({
-    entity: boss,
-    tick: function (){
-        if(Math.random()<=0.05){
-            arrow(this.entity);
-        }
-        if(Math.random()<=0.001){
-            tnt(this.entity);
-        }
-    }
-});
 
 if(b.getBlockId(coords.x, coords.y, coords.z)==BlockID.altar3){
 if(b.getBlockId(coords.x, coords.y - 1, coords.z)==BlockID.altar1){
@@ -63,3 +38,22 @@ b.setBlock(coords.x - 1, coords.y - 1, coords.z - 1, 0, 0)
 } 
 }} 
 );
+Callback.addCallback('EntityDeath', function (entity, attacker, damageType) {
+if(Entity.getTypeName(entity) == "dc:boss0<>"){
+let B = BlockSource.getDefaultForActor(entity);
+let pos = Entity.getPosition(entity);
+if(Math.random()<=0.8){
+B.spawnDroppedItem(pos.x, pos.y+1, pos.z, BlockID.statua, 1, 0, null);
+}
+if(Math.random()<=0.05){
+B.spawnDroppedItem(pos.x, pos.y+1, pos.z, ItemID.clitok1, Math.floor(Math.random()*2), 0, null);
+}
+
+}
+});
+Callback.addCallback("EntityHurt", function (attacker, victim, damageValue, damageType, someBool1, someBool2) {
+    if(Entity.getTypeName(attacker) == "dc:boss0<>"){
+        Entity.addEffect(victim, 15, 1, 100, false, false)
+        Entity.addEffect(victim, 15, 1, 120, false, false)
+    }
+});

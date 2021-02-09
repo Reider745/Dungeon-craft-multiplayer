@@ -13,6 +13,11 @@ ManaCore.set(player, mana);
 }
 );
 
+Recipes.addShaped({id: ItemID.Scroll1, count: 1, data: 0},
+	["**b", "*a*", "b**"], 
+	['a', 340, 0, 'b', 348, 0]);
+
+
 
 
 

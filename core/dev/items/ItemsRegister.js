@@ -145,13 +145,13 @@ IDRegistry.genItemID("glas");
 Item.createItem("glas", "glas", {name: "glas", meta: 0}, {stack: 16});
 
 Translation.addTranslation("glas", {ru: "глаз нежити"});
-
+/*
 IDRegistry.genItemID("poic1"); 
 Item.createItem("poic1", "Search for a flight", {name: "poic", meta: 0}, {stack: 1});
 
 Translation.addTranslation("Search for a flight", {ru: "пояс полёта"});
 
-
+*/
 
 IDRegistry.genItemID("amylet"); 
 Item.createItem("amylet", "Breathing the breath", {name: "amylet", meta: 0}, {stack: 1});
@@ -184,7 +184,7 @@ Item.createItem("bookxp", "book xp", {name: "book_xp", meta: 0}, {stack: 64});
 Item.registerUseFunction("bookxp", function(coords, item, block, player){
 delItem(player, item);
 let ac = new PlayerActor(player);
-ac.addExperience(100);
+ac.addExperience(1000);
 });
 
 Translation.addTranslation("book xp", {ru: "книга опыта"});
@@ -207,6 +207,8 @@ Item.addCreativeGroup("koin", Translation.translate("Koin"), [
 ]);
 
 Translation.addTranslation("Silver coin", {ru: "серебреная монета"});
+
+
 
 
 

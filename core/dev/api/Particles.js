@@ -16,6 +16,16 @@ var ParticlesAPI = {
             size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
         }
     }),
+    forest: Particles.registerParticleType({
+        texture: "EnchantedForest_particle",
+        render: 2,
+        size: [2, 2],
+        lifetime:[50, 50],
+        animators: {
+            alpha:{fadeIn: .4, fadeOut: .4},
+            size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
+        }
+    }),
     getVector: function (pos1, pos2){
         let vector = {
             x: Math.sign(pos1.x-pos2.x),
@@ -103,6 +113,3 @@ var ParticlesAPI = {
         }
     }
 };
-Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player){
-    ParticlesAPI.spawnCircleVector(1000, ParticlesAPI.particles, coords.x, coords.y, coords.z, 1, 19);
-});

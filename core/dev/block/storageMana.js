@@ -11,6 +11,8 @@ TileEntity.registerPrototype(BlockID.manaStorage, {
          manaStorage: 0,
          player: null 
      },
+     isData: function(){
+     },
      tick: function(){
          if(this.data.mode=="give"){
              let mana = ManaCore.get(this.data.player);
@@ -41,7 +43,8 @@ TileEntity.registerPrototype(BlockID.manaStorage, {
          }
      },
      click: function(id, count, data, coords, player){
-         if(Entity.getSneaking(player)==true){
+        if(DA) ac.give(player,  "DungeonAchievement", "storageMagic");
+        if(Entity.getSneaking(player)==true){
              Mp.message(player,  "mana: " + this.data.manaStorage + ";");
          }else{
              if(this.data.player != player){
@@ -85,7 +88,11 @@ var modelAPI2 = new BlockRenderer.Model(mesh2);
 mesh2.importFromFile(__dir__ + "/res/model/magis_storage.obj", "obj", null);
 mesh2.setBlockTexture("storage-mana", 0);
 
-ItemModel.getFor(BlockID.manaStorage, 0).setModUiSpriteName("storage-mana", 0);
+
+
+
+
+
 
 
 

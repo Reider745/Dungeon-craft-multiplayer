@@ -623,11 +623,12 @@ TileEntity.registerPrototype(BlockID.rityal1, {
         }
     }, 
     init: function(){
-        if(this.data.item.id != 0){
-            this.networkData.putInt("itemId", this.data.item.id);
-            this.networkData.putInt("itemData", this.data.item.data);
+        this.isItem();
+        if(this.data.item){
+            if(this.data.item.id) this.networkData.putInt("itemId", this.data.item.id);
+            if(this.data.item.data) this.networkData.putInt("itemData", this.data.item.data);
             this.networkData.sendChanges();
-        } 
+        }
     }, 
     client: {
         updateModel: function() {
@@ -637,11 +638,12 @@ TileEntity.registerPrototype(BlockID.rityal1, {
                 id: id,
                 count: 1,
                 data: data, 
-                size: 1
+                size: 1,
+                rotation: [3.14/2, 0, 0]
             });
         },
         load: function() {
-            this.model = new Animation.Item(this.x + .5, this.y + 1.5, this.z + .5);
+            this.model = new Animation.Item(this.x + .5, this.y + 1.02, this.z + .5);
             this.updateModel();
             this.model.load();
             var that = this;
@@ -676,15 +678,48 @@ TileEntity.registerPrototype(BlockID.rityal1, {
         this.networkData.putInt("itemData", 0);
         this.networkData.sendChanges();
         let PA = new PlayerActor(player);
-        var B = new BlockSource.getDefaultForActor(player);
         if(PA.getGameMode() == 0){
-            B.spawnDroppedItem(this.x, this.y+1,this.z, this.data.item.id, 1, this.data.item.data, null);
+            this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, this.data.item.id, 1, this.data.item.data, null);
+        }
+        for(var i in Idal.arr){
+            if(this.data.item.id == Idal.arr[i]){
+                 this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, this.data.item.id, 1, this.data.item.data, null);
+            }
         }
         this.data.item = {
             id: 0,
             data: 0
         };
     }, 
+    tick: function (){
+        for(var i in Idal.arr){
+            if(this.data.item.id == Idal.arr[i] && this.data.item.data <= 999){
+                if(World.getThreadTime()%60){
+                     if(Dungeon.isStructure("IdalUpdate.json", this.x, this.y, this.z, 0, this.dimension)){
+                         Mp.spawnParticle(ParticlesAPI.particles, this.x + Math.random()*3-Math.random()*2, this.y - 0.5, this.z + Math.random()*3-Math.random()*2, 0, Math.random()/9, 0);
+                        Callback.invokeCallback("RitualDC", player, "idal", coords);
+ this.data.item.data++;
+                         if(Math.random()<=0.00){
+                             this.blockSource.setBlock(this.x+2, this.y+1, this.z+2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x + 2, this.y + 1, this.z + 2, 0, Math.random()/9, 0);
+                         }
+                         if(Math.random()<=0.005){
+                             this.blockSource.setBlock(this.x-2, this.y+1, this.z+2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x - 2, this.y + 1, this.z + 2, 0, Math.random()/9, 0);
+                         }
+                         if(Math.random()<=0.005){
+                             this.blockSource.setBlock(this.x+2, this.y+1, this.z-2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x + 2, this.y + 1, this.z - 2, 0, Math.random()/9, 0);
+                         }
+                         if(Math.random()<=0.005){
+                             this.blockSource.setBlock(this.x-2, this.y+1, this.z-2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x - 2, this.y + 1, this.z - 2, 0, Math.random()/9, 0);
+                         }
+                    }
+                }
+            }
+        }
+    },
     destroyAnimation: function(){
         this.networkData.putInt("itemId", 0);
         this.networkData.putInt("itemData", 0);
@@ -694,14 +729,29 @@ TileEntity.registerPrototype(BlockID.rityal1, {
             data: 0
         };
     }, 
+    isItem: function(){
+        if(!this.data.item) this.data.item = {id: 0, data: 0};
+        if(!this.data.item.id) this.data.item.id = 0;
+        if(!this.data.item.data) this.data.item.data = 0;
+    },
     click: function(id, count, data, coords, player) {
+        Game.prevent();
+        this.isItem();
         if(this.data.item.id != 0){
             if(id != ItemID.RitualActivator)
                 this.drop(player);
         }else{
             if(id != ItemID.RitualActivator){
-                let item = Player.getCarriedItem();
+                let item = Entity.getCarriedItem(player);
                 delItem(player, {id:id,data:data,count:count}) ;
+                let PA = new PlayerActor(player);
+                if(PA.getGameMode() != 0){
+                    for(var i in Idal.arr){
+                        if(id == Idal.arr[i]){
+                             Entity.setCarriedItem(player, item.id, item.count-1, item.data);
+                        }
+                    }
+                }
                 this.animation(item);
             }
         }
@@ -714,6 +764,13 @@ TileEntity.registerPrototype(BlockID.rityal1, {
         }
     }
 });
+
+
+
+
+
+
+
 
 
 

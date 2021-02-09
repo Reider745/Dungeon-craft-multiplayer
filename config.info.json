@@ -1,0 +1,97 @@
+{
+    "description": {
+        "ru": "    Настройки мода",
+        "en": "    Mod settings"
+    },
+    "properties": {
+        "enabled": {
+            "index": 0
+        },
+        "debug": {
+            "index": 2,
+            "displayIf": "enabled"
+        },
+        "game": {
+            "index": 1,
+            "displayIf": "enabled"
+        },
+        "debug.numberOfLines": {
+            "name": {
+                "ru": "количество строк",
+                "en": "number of lines"
+            },
+            "description": {
+                "ru": "    Количество строк после которого лог будет очищатся",
+                "en": "    The number of lines after which the log will be cleared"
+            },
+            "displayIf": "debug.log"
+        },
+        "debug.enabled": {
+            "name": {
+                "ru": "включен",
+                "en": "enabled"
+            },
+            "description": {
+                "ru": "    Если включён то будут доступны следующие настройки",
+                "en": "    If enabled, the following settings will be available"
+            }
+        },
+        "debug.command": {
+            "name": {
+                "ru": "команды",
+                "en": "command"
+            },
+            "description": {
+                "ru": "    Если включено то будут доступны команды",
+                "en": "    If enabled then commands will be available"
+            },
+            "displayIf": "debug.enabled"
+        },
+        "debug.log": {
+            "name": {
+                "ru": "лог",
+                "en": "log"
+            },
+            "description": {
+                "ru": "    Если включён то всё что происходит в моде сохраняется в файл(для разработчиков)",
+                "en": "    If enabled, everything that happens in the mod is saved to a file (for developers)"
+            },
+            "displayIf": "debug.enabled"
+        },
+        "debug.prohibitedItems": {
+            "name": {
+                "ru": "запрещённые предметы",
+                "en": "prohibitedI items"
+            },
+            "description": {
+                "ru": "    Если включёно то в креативном инвенторе будут новые предметы",
+                "en": "    If enabled, there will be new items in the creative inventor"
+            },
+            "displayIf": "debug.enabled"
+        },
+        "game.particles": {
+            "name": {
+                "ru": "партиклы",
+                "en": "particles"
+            },
+            "description": {
+                "ru": "    Если включёно то партиклы будут спавнится",
+                "en": "    If enabled, particles will spawn"
+            }
+        },
+        "game.particlesCount": {
+            "name": {
+                "ru": "количество партиклов",
+                "en": "number of particles"
+            },
+            "description": {
+                "ru": "    Шанс с которым будут спавнится частицы",
+                "en": "    The chance with which particles will spawn"
+            },
+            "displayIf": "game.particles",
+            "type": "SeekBar",
+            "max":100,
+            "min": 1
+        }
+    }
+}

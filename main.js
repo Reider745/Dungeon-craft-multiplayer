@@ -2,7 +2,7 @@
 BUILD INFO:
   dir: core/dev
   target: main.js
-  files: 40
+  files: 38
 */
 
 
@@ -10,11 +10,57 @@ BUILD INFO:
 // file: info.js
 
 IMPORT("DungeonAPI");
-IMPORT("ToolType");
 IMPORT("ToolLib");
 IMPORT("TileRender");
-IMPORT("DungeonCraftAPI");
 IMPORT("add-onCreter");
+var config = FileTools.ReadJSON(__dir__+"/config.json");
+const PartType = {
+    mana: Particles.registerParticleType({
+        texture: "mana",
+        render: 2,
+        size: [2, 2],
+        lifetime:[50, 50],
+        animators: {
+            alpha:{fadeIn: .4, fadeOut: .4},
+            size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
+        }
+    }),
+    forest: Particles.registerParticleType({
+        texture: "EnchantedForest_particle",
+        render: 2,
+        size: [2, 2],
+        lifetime:[50, 50],
+        animators: {
+            alpha:{fadeIn: .4, fadeOut: .4},
+            size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
+        }
+    }),
+    magic: Particles.registerParticleType({
+        texture: "magic_particle",
+        render: 2,
+        size: [2, 2],
+        lifetime:[50, 50],
+        animators: {
+            alpha:{fadeIn: .4, fadeOut: .4},
+            size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
+        }
+    }),
+    fire: Particles.registerParticleType({
+        texture: "fire",
+        render: 2,
+        size: [2, 2],
+        lifetime:[50, 50],
+        animators: {
+            alpha:{fadeIn: .4, fadeOut: .4},
+            size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
+        }
+    }),
+};
+let DA = false;
+
+function generation(){
+
+}
 
 
 
@@ -136,17 +182,19 @@ setWood(this.x, this.y-1, this.z);
 
 
 
+
+
 // file: command.js
 
 function getPlayer(name){
     let arr = Network.getConnectedPlayers();
-    for(i in arr){
+    for(let i in arr){
         if(Entity.getNameTag(arr[i])==name){
             return arr[i];
         }
     }
 }
-if(__config__.getBool("debug.active")){
+if(config.debug.command && config.debug.enabled){
     Callback.addCallback("NativeCommand", function (src){
         let arr = src.split(" ");
         if(arr[0] == "/mana"){
@@ -160,6 +208,7 @@ if(__config__.getBool("debug.active")){
                         }
                         mana.count = parseInt(arr[3]);
                         Mp.message(player, "вам установлено количество маны - "+arr[3]);
+                        ManaCore.set(player, mana);
                         Game.prevent();
                     }
                 }
@@ -174,6 +223,7 @@ if(__config__.getBool("debug.active")){
                         }
                         mana.countMax = parseInt(arr[3]);
                         Mp.message(player, "вам установлено максимальное количество маны - "+arr[3]);
+                        ManaCore.set(player, mana);
                    }
                 }
             }
@@ -183,6 +233,7 @@ if(__config__.getBool("debug.active")){
                         let player = getPlayer(arr[2]);
                         ManaCore.create(player);
                         Mp.message(player, "у вас было удалено сохранение маны");
+                        ManaCore.set(player, mana);
                     }
                 }
             }
@@ -204,7 +255,7 @@ Network.addClientPacket("dc.read", function(packetData) {
     manaPlayer = packetData;
 });
 Callback.addCallback("PlayerChangedDimension", function(player, currentId, lastId){
-    //ManaCore.read(player);
+    ManaCore.read(player);
 });
 Saver.addSavesScope("mana",
     function read(scope) {
@@ -245,20 +296,17 @@ var ManaCore = {
     },
     get: function (player){
         if(manaPlayer[player]){
-            return manaPlayer[player];
+            return {count: manaPlayer[player].count, countMax: manaPlayer[player].countMax};
             Debug.message("get mana player - "+player);
         }else{
             Debug.message("[error]noy mana player - "+player);
             this.create(player);
-            return manaPlayer[player];
+            return {count: manaPlayer[player].count, countMax: manaPlayer[player].countMax};
         }
     },
     set: function (player, obj){
         if(manaPlayer[player]){
-            Callback.invokeCallback("wasteMana", player, this.get(player), obj);
-            Debug.message("set mana player - "+player+" "+JSON.stringify(obj, null, true));
-            manaPlayer[player] = obj;
-            Network.sendToServer("dc.set", manaPlayer);
+            Callback.invokeCallback("wasteMana", player, {count: manaPlayer[player].count, countMax: manaPlayer[player].countMax}, obj);
         }else{
             Debug.message("[error]noy mana player - "+player);
         }
@@ -276,9 +324,9 @@ Network.addServerPacket("dc.set", function(client, data) {
 var Debug = {
     lines: 0,
     message: function (text){
-        if(__config__.getBool("debug.active")){
+        if(config.debug.enabled && config.debug.log){
             this.lines += 1;
-            if(this.lines >= __config__.getNumber("debug.lines")){
+            if(this.lines >= config.debug.numberOfLines){
                 this.lines = 0;
                 this.clear();
             }
@@ -299,7 +347,9 @@ Debug.clear();
 // file: api/multiplayer.js
 
 Network.addClientPacket("dc.particle", function(packetData) {
-    Particles.addParticle(packetData.p, packetData.x, packetData.y, packetData.z, packetData.vx, packetData.vy, packetData.vz);
+    if(config.game.particles == true && Math.random()*100<=config.game.particlesCount){
+        Particles.addParticle(packetData.p, packetData.x, packetData.y, packetData.z, packetData.vx, packetData.vy, packetData.vz);
+    }
 });
 Network.addClientPacket("dc.message", function(packetData) {
     Game.message(packetData);
@@ -315,16 +365,18 @@ var Mp = {
         }
     },
     spawnParticle: function (type, x, y, z, vx, vy, vz){
-        var players = Network.getConnectedPlayers();
-        for(var i in players){
-            var client = Network.getClientForPlayer(players[i]);
-            if(client){
-                client.send("dc.particle", {p: type, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz});
-                Debug.message("spawn particle");
-            }else{
-                Debug.message("[error]spawn particle");
+        
+            var players = Network.getConnectedPlayers();
+            for(var i in players){
+                var client = Network.getClientForPlayer(players[i]);
+                if(client){
+                    client.send("dc.particle", {p: type, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz});
+                    Debug.message("spawn particle");
+                }else{
+                    Debug.message("[error]spawn particle");
+                }
             }
-        }
+        
     }
 };
 
@@ -405,115 +457,6 @@ mesh.setBlockTexture(texture, 0);
 
 
 
-// file: api/DungeonAPI.js
-
-function setStructure (file, dimension, x, y, z){
-    let structure  = Dungeon.getStructure(file);
-    for(i in structure){
-        let identifier = getIdentifier(structure[i]);
-        x = identifier.x + x;
-        y = identifier.y + y;
-        z = identifier.z + z;
-        let blockSource = BlockSource.getDefaultForDimension(dimension)
-        blockSource.setBlock(x, y, z, identifier.id, identifier.data)
-    }
-}
-
-
-
-
-// file: api/Recipes.js
-
-var dungeonRuneCtol = {
-
-    recipesRack: [],
-	recipesAltar: [],
-
-   recipesRackRecipe: function (recipe) {
-        this.recipesRack.push(recipe);
-    },
-
-    getRackRecipe: function (id, data) {
-        for (var key in this.recipesRack) {
-            var recipe = this.recipesRack[key];
-            if (recipe.input.id === id && recipe.input.data === data) {
-                return recipe;
-            }
-        }
-    },
-	
-	recipesAltarRecipe: function (recipe) {
-        this.recipesAltar.push(recipe);
-    },
-	
-   getAltarRecipe: function (input) {
-         for (var i = 0; i < this.recipesAltar.length; i++) {
-
-            if (input[0].id == this.recipesAltar[i].Source1.id) {
-                if (input[0].data == this.recipesAltar[i].Source1.data) {
-                    if (input[0].count >= this.recipesAltar[i].Source1.count) {
-
-                        if (input[1].id == this.recipesAltar[i].Source2.id) {
-                            if (input[1].data == this.recipesAltar[i].Source2.data) {
-                                if (input[1].count >= this.recipesAltar[i].Source2.count) {
-									
-	 if (input[2].id == this.recipesAltar[i].Source3.id) {
-                            if (input[2].data == this.recipesAltar[i].Source3.data) {
-                                if (input[2].count >= this.recipesAltar[i].Source3.count) {
-									
-									 if (input[3].id == this.recipesAltar[i].Source4.id) {
-                            if (input[3].data == this.recipesAltar[i].Source4.data) {
-                                if (input[3].count >= this.recipesAltar[i].Source4.count) {
-									
-									 if (input[4].id == this.recipesAltar[i].Source5.id) {
-                            if (input[4].data == this.recipesAltar[i].Source5.data) {
-                                if (input[4].count >= this.recipesAltar[i].Source5.count) {
-									
-									 if (input[5].id == this.recipesAltar[i].Source6.id) {
-                            if (input[5].data == this.recipesAltar[i].Source6.data) {
-                                if (input[5].count >= this.recipesAltar[i].Source6.count) {
-									
-									 if (input[6].id == this.recipesAltar[i].Source7.id) {
-                            if (input[6].data == this.recipesAltar[i].Source7.data) {
-                                if (input[6].count >= this.recipesAltar[i].Source7.count) {
-									
-				 
-									
-                                    return this.recipesAltar[i];
-
-                                
-							
-				 
-								}
-							}
-									 }
-								}
-							}
-									 }
-								}
-							}
-									 }
-								}
-							}
-									 }
-								}
-								
-							}
-	 }
-								}
-							}
-						}
-					}
-				}
-			}
-
-        }
-	  }
-};
-
-
-
-
 // file: api/Particles.js
 
 Math.sign = Math.sign || function(x) { 
@@ -526,6 +469,16 @@ Math.sign = Math.sign || function(x) {
 var ParticlesAPI = {
    particles: Particles.registerParticleType({
         texture: "mana",
+        render: 2,
+        size: [2, 2],
+        lifetime:[50, 50],
+        animators: {
+            alpha:{fadeIn: .4, fadeOut: .4},
+            size:{fadeOut: .5, fadeIn:0.2, start:0, end:0}
+        }
+    }),
+    forest: Particles.registerParticleType({
+        texture: "EnchantedForest_particle",
         render: 2,
         size: [2, 2],
         lifetime:[50, 50],
@@ -621,9 +574,6 @@ var ParticlesAPI = {
         }
     }
 };
-Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player){
-    ParticlesAPI.spawnCircleVector(1000, ParticlesAPI.particles, coords.x, coords.y, coords.z, 1, 19);
-});
 
 
 
@@ -728,7 +678,7 @@ StructureGrobnisa.setPrototype({
     }
 });
 Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
-if (Math.random()*2200 <= 1){
+if (Math.random()*2300 <= 1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
         coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
 
@@ -739,6 +689,7 @@ Item2.fillChest(coords.x+2, coords.y+2, coords.z-2, id);
 Item2.fillChest(coords.x+4, coords.y+2, coords.z+3, id);
 }
 });
+
 
 var StructureGrobnisa2 = new DungeonAPI("grobnisa2.json");
 StructureGrobnisa2.setPrototype({
@@ -761,7 +712,7 @@ StructureGrobnisa2.setPrototype({
     }
 });
 Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
-if (Math.random()*2800 <= 1){
+if (Math.random()*2850 <= 1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
         coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
 
@@ -774,7 +725,7 @@ Item2.fillChest(coords.x-3, coords.y+4, coords.z-3, 0, id);
 });
 
 Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
-if (Math.random()*2500 <= 1){
+if (Math.random()*2600 <= 1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
         coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
 
@@ -819,7 +770,7 @@ Item2.fillChest(coords.x+4, coords.y+1, coords.z-5, 0, id);
 }
 });
 Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
-if (Math.random()*1750 <= 1){
+if (Math.random()*1850 <= 1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
         coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
 
@@ -829,7 +780,7 @@ Item3.fillChest(coords.x, coords.y+1, coords.z, 0, id);
 }
 });
 Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
-if (Math.random()*1250 <= 1){
+if (Math.random()*1350 <= 1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
         coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
 
@@ -867,7 +818,7 @@ Item2.fillChest(coords.x-3, coords.y+1, coords.z-3, 0, id);
 }
 });
 Callback.addCallback("GenerateNetherChunk", function(chunkX, chunkZ, random, id){
-if (Math.random()*350 <= 1){
+if (Math.random()*150 <= 1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 200);
         coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
         if (World.getBlock(coords.x, coords.y, coords.z).id == 87){
@@ -875,6 +826,60 @@ if (Math.random()*350 <= 1){
             Item2.fillChest(coords.x, coords.y, coords.z, 0, id);
         }
 }      
+});
+
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+if (Math.random() <= 0.01){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+
+(new DungeonAPI("chest).json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+Item5.fillChest(coords.x, coords.y+1, coords.z, 0, id);
+}
+});
+
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+if (Math.random()*100 <= 0.1){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+
+(new DungeonAPI("dc2_sektant.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+
+}
+});
+
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+if (Math.random()*100 <= 0.2){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+
+(new DungeonAPI("dc2_xram.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+Item3.fillChest(coords.x, coords.y+1, coords.z, 0, id);
+}
+});
+
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+if (Math.random()*100 <= 0.1){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+
+(new DungeonAPI("dc2_xram2.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+Item2.fillChest(coords.x, coords.y+1, coords.z, 0, id);
+}
+});
+
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+if (Math.random()*100 <= 0.3){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+
+(new DungeonAPI("teleport_rai.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+Item3.fillChest(coords.x, coords.y, coords.z, 0, id);
+}
 });
 
 
@@ -1601,11 +1606,12 @@ TileEntity.registerPrototype(BlockID.rityal1, {
         }
     }, 
     init: function(){
-        if(this.data.item.id != 0){
-            this.networkData.putInt("itemId", this.data.item.id);
-            this.networkData.putInt("itemData", this.data.item.data);
+        this.isItem();
+        if(this.data.item){
+            if(this.data.item.id) this.networkData.putInt("itemId", this.data.item.id);
+            if(this.data.item.data) this.networkData.putInt("itemData", this.data.item.data);
             this.networkData.sendChanges();
-        } 
+        }
     }, 
     client: {
         updateModel: function() {
@@ -1615,11 +1621,12 @@ TileEntity.registerPrototype(BlockID.rityal1, {
                 id: id,
                 count: 1,
                 data: data, 
-                size: 1
+                size: 1,
+                rotation: [3.14/2, 0, 0]
             });
         },
         load: function() {
-            this.model = new Animation.Item(this.x + .5, this.y + 1.5, this.z + .5);
+            this.model = new Animation.Item(this.x + .5, this.y + 1.02, this.z + .5);
             this.updateModel();
             this.model.load();
             var that = this;
@@ -1654,15 +1661,48 @@ TileEntity.registerPrototype(BlockID.rityal1, {
         this.networkData.putInt("itemData", 0);
         this.networkData.sendChanges();
         let PA = new PlayerActor(player);
-        var B = new BlockSource.getDefaultForActor(player);
         if(PA.getGameMode() == 0){
-            B.spawnDroppedItem(this.x, this.y+1,this.z, this.data.item.id, 1, this.data.item.data, null);
+            this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, this.data.item.id, 1, this.data.item.data, null);
+        }
+        for(var i in Idal.arr){
+            if(this.data.item.id == Idal.arr[i]){
+                 this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, this.data.item.id, 1, this.data.item.data, null);
+            }
         }
         this.data.item = {
             id: 0,
             data: 0
         };
     }, 
+    tick: function (){
+        for(var i in Idal.arr){
+            if(this.data.item.id == Idal.arr[i] && this.data.item.data <= 999){
+                if(World.getThreadTime()%60){
+                     if(Dungeon.isStructure("IdalUpdate.json", this.x, this.y, this.z, 0, this.dimension)){
+                         Mp.spawnParticle(ParticlesAPI.particles, this.x + Math.random()*3-Math.random()*2, this.y - 0.5, this.z + Math.random()*3-Math.random()*2, 0, Math.random()/9, 0);
+                        Callback.invokeCallback("RitualDC", player, "idal", coords);
+ this.data.item.data++;
+                         if(Math.random()<=0.00){
+                             this.blockSource.setBlock(this.x+2, this.y+1, this.z+2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x + 2, this.y + 1, this.z + 2, 0, Math.random()/9, 0);
+                         }
+                         if(Math.random()<=0.005){
+                             this.blockSource.setBlock(this.x-2, this.y+1, this.z+2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x - 2, this.y + 1, this.z + 2, 0, Math.random()/9, 0);
+                         }
+                         if(Math.random()<=0.005){
+                             this.blockSource.setBlock(this.x+2, this.y+1, this.z-2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x + 2, this.y + 1, this.z - 2, 0, Math.random()/9, 0);
+                         }
+                         if(Math.random()<=0.005){
+                             this.blockSource.setBlock(this.x-2, this.y+1, this.z-2, 0, 0);
+                             Mp.spawnParticle(ParticlesAPI.forest, this.x - 2, this.y + 1, this.z - 2, 0, Math.random()/9, 0);
+                         }
+                    }
+                }
+            }
+        }
+    },
     destroyAnimation: function(){
         this.networkData.putInt("itemId", 0);
         this.networkData.putInt("itemData", 0);
@@ -1672,14 +1712,29 @@ TileEntity.registerPrototype(BlockID.rityal1, {
             data: 0
         };
     }, 
+    isItem: function(){
+        if(!this.data.item) this.data.item = {id: 0, data: 0};
+        if(!this.data.item.id) this.data.item.id = 0;
+        if(!this.data.item.data) this.data.item.data = 0;
+    },
     click: function(id, count, data, coords, player) {
+        Game.prevent();
+        this.isItem();
         if(this.data.item.id != 0){
             if(id != ItemID.RitualActivator)
                 this.drop(player);
         }else{
             if(id != ItemID.RitualActivator){
-                let item = Player.getCarriedItem();
+                let item = Entity.getCarriedItem(player);
                 delItem(player, {id:id,data:data,count:count}) ;
+                let PA = new PlayerActor(player);
+                if(PA.getGameMode() != 0){
+                    for(var i in Idal.arr){
+                        if(id == Idal.arr[i]){
+                             Entity.setCarriedItem(player, item.id, item.count-1, item.data);
+                        }
+                    }
+                }
                 this.animation(item);
             }
         }
@@ -1692,6 +1747,13 @@ TileEntity.registerPrototype(BlockID.rityal1, {
         }
     }
 });
+
+
+
+
+
+
+
 
 
 
@@ -1803,6 +1865,8 @@ TileEntity.registerPrototype(BlockID.manaStorage, {
          manaStorage: 0,
          player: null 
      },
+     isData: function(){
+     },
      tick: function(){
          if(this.data.mode=="give"){
              let mana = ManaCore.get(this.data.player);
@@ -1833,7 +1897,8 @@ TileEntity.registerPrototype(BlockID.manaStorage, {
          }
      },
      click: function(id, count, data, coords, player){
-         if(Entity.getSneaking(player)==true){
+        if(DA) ac.give(player,  "DungeonAchievement", "storageMagic");
+        if(Entity.getSneaking(player)==true){
              Mp.message(player,  "mana: " + this.data.manaStorage + ";");
          }else{
              if(this.data.player != player){
@@ -1876,328 +1941,6 @@ var modelAPI2 = new BlockRenderer.Model(mesh2);
            renderAPI2.addEntry(modelAPI2);
 mesh2.importFromFile(__dir__ + "/res/model/magis_storage.obj", "obj", null);
 mesh2.setBlockTexture("storage-mana", 0);
-
-ItemModel.getFor(BlockID.manaStorage, 0).setModUiSpriteName("storage-mana", 0);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// file: block/ritual/rune.js
-
-var runeAltarDungeon = new UI.StandartWindow({
-    standart: {
-        header: {text: {text: "рунный алтарь/Rule Altar"}},
-         inventory: {standart: true},
-     
-    },
-
-    drawing: [
-    ],
-
-    elements: {
-		"slotRes": {type: "slot", x: 630, y: 20, bitmap: "slot"},
-		"slot2": {type: "slot", x: 530, y: 120, bitmap: "slot"},
-		"slot3": {type: "slot", x: 430, y: 220, bitmap: "slot"},
-		"slot4": {type: "slot", x: 530, y: 320, bitmap: "slot"},
-		"slot5": {type: "slot", x: 730, y: 120, bitmap: "slot"},
-		"slot6": {type: "slot", x: 830, y: 220, bitmap: "slot"},
-		"slot7": {type: "slot", x: 730, y: 320, bitmap: "slot"},
-
-		"slot1": {type: "slot", x: 630, y: 220, bitmap: "slot"}
-    }
-});
-
-
-
-
-IDRegistry.genBlockID("runeAltarDungeon");
-Block.createBlock("runeAltarDungeon", [ {name: "Rule Altar", texture: [["nis", 0],["vverx1", 0], ["ctoronS", 0],["storonO", 0], ["storonM", 0], ["ctoronl", 0]],inCreative: true}]);
-
-Translation.addTranslation("Rule Altar", {ru: "рунный алтарь"});
-
-Render.setRitualAltarRender(BlockID.runeAltarDungeon, true);
-
-TileEntity.registerPrototype(BlockID.runeAltarDungeon, {
-	defaultValues: {
-		progress: 0
-	},
-useNetworkItemContainer: true,
-	tick: function(){
-		 var slotResult = this.container.getSlot("slotResult");
-		
-	  
-	   var slotSource1 = this.container.getSlot("slot1");
-	    var slotSource2 = this.container.getSlot("slot2");
-	    var slotSource3 = this.container.getSlot("slot3");
-	    var slotSource4 = this.container.getSlot("slot4");
-	    var slotSource5 = this.container.getSlot("slot5");
-	    var slotSource6 = this.container.getSlot("slot6");
-	    var slotSource7 = this.container.getSlot("slot7");
-	    var slotResult = this.container.getSlot("slotRes");
-
-		var input = [slotSource1, slotSource2, slotSource3, slotSource4, slotSource5, slotSource6, slotSource7];
-		
-        var output = dungeonRuneCtol.getAltarRecipe(input);
-		
-	   if (output){
-		   this.data.progress++;
-		   if (this.data.progress++ >= 40){
- slotSource1.count--;
- slotSource2.count--;
- slotSource3.count--;
- slotSource4.count--;
- slotSource5.count--;
- slotSource6.count--;
- slotSource7.count--;
-
- 
- slotSource2.id = output.backItem1.id;
- slotSource5.id = output.backItem2.id;
- slotSource2.data = output.backItem1.data;
- slotSource5.data = output.backItem2.data;
- slotSource2.count += output.backItem1.count;
- slotSource5.count += output.backItem2.count;
- 
- slotResult.id = output.Result.id;
- slotResult.data = output.Result.data;
- slotResult.count += output.Result.count;
-  this.data.progress = 0;
-		   }
-	 }  
-this.container.validateAll(); 
-
-	},
-getScreenName: function(player, coords) {
-return "runeAltarDungeon";
-},
-	
-	getScreenByName: function(screenName) {
-		return runeAltarDungeon; 
-	}
-	
-
-});
-
-
-
-/*
-  R
- 2 5
-3 1 6
- 4 7
-*/
-const empty = 0;
-
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.manysript2, data: 0, count: 1},
-	Source2: {id: ItemID.rune3, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.rune4, data: 0, count: 1},
-	Source5: {id: ItemID.rune4, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.rune3, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.Scroll6, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.manysript2, data: 0, count: 1},
-	Source2: {id: ItemID.rune4, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.rune4, data: 0, count: 1},
-	Source5: {id: ItemID.rune4, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.rune4, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.Scroll1, data: 0, count: 1}, 
-});
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.manysript2, data: 0, count: 1},
-	Source2: {id: ItemID.rune4, data: 0, count: 1},
-	Source3: {id: ItemID.clitok, data: 0, count: 1},
-	Source4: {id: ItemID.rune4, data: 0, count: 1},
-	Source5: {id: ItemID.rune4, data: 0, count: 1},
-	Source6: {id: ItemID.clitok, data: 0, count: 1},
-	Source7: {id: ItemID.rune4, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.Scroll2, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.manysript2, data: 0, count: 1},
-	Source2: {id: ItemID.rune1, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.rune1, data: 0, count: 1},
-	Source5: {id: ItemID.rune1, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.rune1, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.Scroll4, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: BlockID.stone2, data: 0, count: 1},
-	Source2: {id: ItemID.clitok1, data: 0, count: 1},
-	Source3: {id: ItemID.koin_1, data: 0, count: 1},
-	Source4: {id: ItemID.clitok1, data: 0, count: 1},
-	Source5: {id: ItemID.clitok1, data: 0, count: 1},
-	Source6: {id: ItemID.koin_1, data: 0, count: 1},
-	Source7: {id: ItemID.clitok1, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: BlockID.altar, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.sword_2, data: 0, count: 1},
-	Source2: {id: ItemID.clitok1, data: 0, count: 1},
-	Source3: {id: ItemID.clitok, data: 0, count: 1},
-	Source4: {id: 280, data: 0, count: 1},
-	Source5: {id: ItemID.clitok1, data: 0, count: 1},
-	Source6: {id: ItemID.clitok, data: 0, count: 1},
-	Source7: {id: 280, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.sword_1, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.pickaxe_2, data: 0, count: 1},
-	Source2: {id: ItemID.clitok1, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: 280, data: 0, count: 1},
-	Source5: {id: ItemID.clitok1, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: 280, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.pickaxe_1, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.armor5, data: 0, count: 1},
-	Source2: {id: ItemID.clitok1, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.clitok, data: 0, count: 1},
-	Source5: {id: ItemID.clitok1, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.clitok, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.armor1, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.armor6, data: 0, count: 1},
-	Source2: {id: ItemID.clitok1, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.clitok1, data: 0, count: 1},
-	Source5: {id: ItemID.clitok1, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.clitok1, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.armor2, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.armor7, data: 0, count: 1},
-	Source2: {id: ItemID.clitok1, data: 0, count: 1},
-	Source3: {id: ItemID.clitok, data: 0, count: 1},
-	Source4: {id: ItemID.clitok1, data: 0, count: 1},
-	Source5: {id: ItemID.clitok1, data: 0, count: 1},
-	Source6: {id: ItemID.clitok, data: 0, count: 1},
-	Source7: {id: ItemID.clitok1, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.armor3, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: ItemID.armor8, data: 0, count: 1},
-	Source2: {id: ItemID.clitok, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.clitok1, data: 0, count: 1},
-	Source5: {id: ItemID.clitok, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.clitok1, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: ItemID.armor4, data: 0, count: 1}, 
-});
-
-dungeonRuneCtol.recipesAltarRecipe({
-	Source1: {id: BlockID.rityal1, data: 0, count: 1},
-	Source2: {id: ItemID.crystalLightning, data: 0, count: 1},
-	Source3: {id: ItemID.clitok1, data: 0, count: 1},
-	Source4: {id: ItemID.crystalearth, data: 0, count: 1},
-	Source5: {id: ItemID.crystalWind, data: 0, count: 1},
-	Source6: {id: ItemID.clitok1, data: 0, count: 1},
-	Source7: {id: ItemID.crystalfire, data: 0, count: 1},
-
-	
-	backItem1: {id: empty, data: 0, count: 0},
-	backItem2: {id: empty, data: 0, count: 0},
-	
-	Result: {id: BlockID.rityal, data: 0, count: 1}, 
-});
 
 
 
@@ -2369,7 +2112,7 @@ TileEntity.registerPrototype(BlockID.statua, {
     },
     tick: function (){
         if(this.data.player){
-            for(i in Ritual.arr1){
+            for(let i in Ritual.arr1){
                 let obj = Ritual.arr1[i].obj;
                 let func = Ritual.arr1[i].func;
                 if(this.check(obj.xp, this.x+2, this.y-1, this.z)){
@@ -2396,7 +2139,10 @@ TileEntity.registerPrototype(BlockID.statua, {
         TileEntity.getTileEntity(this.x, this.y-1, this.z+2, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x+2, this.y-1, this.z, this.blockSource).destroyAnimation();
         TileEntity.getTileEntity(this.x-2, this.y-1, this.z, this.blockSource).destroyAnimation();
-        this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, Ritual.arr1[i].id, 1, 0, null);
+       
+Callback.invokeCallback("RitualDC", this.data.player, "statua", {x: this.x, y: this.y, z: this.z});
+
+ this.blockSource.spawnDroppedItem(this.x, this.y+1,this.z, Ritual.arr1[i].id, 1, 0, null);
         this.blockSource.spawnEntity(this.x, this.y+1, this.z, 93);
         func(this.data.player, this.x, this.y, this.z);
         this.data.active = false;
@@ -2426,7 +2172,7 @@ renderAPI.setGlblock1(BlockID.gubok2);
 Translation.addTranslation("Cruster's growth controller", {ru: "Контроллер роста криссталов"});
 Ritual.arr2 = [];
 Ritual.addGrowth = function (id){
-    
+    Ritual.arr2.push(id);
 }
 TileEntity.registerPrototype(BlockID.gubok2, {
     defaultValues: {
@@ -2443,7 +2189,8 @@ TileEntity.registerPrototype(BlockID.gubok2, {
                     if(this.blockSource.getBlockId(this.x-2, this.y+1, this.z-2)==id){
                         if(this.blockSource.getBlockId(this.x, this.y+1, this.z)==0){
                         if(this.data.progres>=200){
-                          this.data.progres = 0;!
+Callback.invokeCallback("RitualDC", player, "cristal", {x: this.x, y: this.y, z: this.z});
+                          this.data.progres = 0;
                            ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x+2, this.y+1, this.z+2, this.x, this.y+1, this.z);
                            ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x-2, this.y+1, this.z+2, this.x, this.y+1, this.z);
                            ParticlesAPI.coords("EnchantedForest_particle", 40, [3,3], this.x+2, this.y+1, this.z-2, this.x, this.y+1, this.z);
@@ -2467,7 +2214,9 @@ TileEntity.registerPrototype(BlockID.gubok2, {
         }
     },
     tick: function (){
-        this.check(1);
+        for(var i in Ritual.arr2){
+            this.check(Ritual.arr2[i]);
+        }
     }
 })
 
@@ -2493,12 +2242,58 @@ Item2.addItem(322, 0.1, {max:1});
 Item2.addItem(ItemID.Gem, 0.3, {max:1});
 Item2.addItem(ItemID.Gem2, 0.08, {max:1});
 Item2.addItem(ItemID.manysript1, 0.05, {max:1});
+
+
 var date = new Date();
 if(date.getMonth()==0 && date.getDate()>=1 && date.getDate() <= 10){
+
+
+    let biome = [12, 13, 26, 30, 31, 34, 140, 158];
+    let ng = new ItemGenerate();
+    ng.addItem(264, 0.3, {max:3});
+    ng.addItem(266, 0.5, {max:5});
+    ng.addItem(265, 1, {max:10});
+    ng.addItem(80, 1, {max:10});
+    ng.addItem(ItemID.koin_0, 0.2, {max:1});
+    ng.addItem(ItemID.koin_1, 0.1, {max:1});
+
+    Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+for(let i in biome){
+if (Math.random()*100 <= 0.4){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+if(BlockSource.getCurrentWorldGenRegion().getBiome(coords.x, coords.z) == biome[i]){
+
+(new DungeonAPI("нг1.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+ng.fillChest(coords.x, coords.y+1, coords.z, 0, id);
+}
+}
+}
+});
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ, random, id){
+for(let i in biome){
+if (Math.random()*100 <= 0.3){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 100);
+        coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+if(BlockSource.getCurrentWorldGenRegion().getBiome(coords.x, coords.z) == biome[i]){
+
+(new DungeonAPI("нг2.json")).setStructure(coords.x, coords.y, coords.z, 0, id);
+
+ng.fillChest(coords.x, coords.y+1, coords.z+1, 0, id);
+ng.fillChest(coords.x, coords.y+1, coords.z+2, 0, id);
+}
+}
+}
+});
+
+    
     IDRegistry.genItemID("present"); 
 Item.createItem("present", "present", {name: "present", meta: 0}, {stack: 1});
     Translation.addTranslation("present", {ru: "подарок"});
         Item2.addItem(ItemID.present, 0.1, {max:1});
+        ng.addItem(ItemID.present, 0.3, {max:1});
+        ng.registerRecipeViewer("Generate6", "генерация предметов");
     let arrPresent = [];
     let Present = {
         add: function (obj){
@@ -2553,7 +2348,8 @@ let Item3 = new ItemGenerate();
 Item3.addItem(264, 0.3, {max:5});
 Item3.addItem(265, 1, {max:3});
 Item3.addItem(ItemID.koin_0, 0.1, {max:2});
-Item3.addItem(ItemID.koin_1, 0.01, {max:1})
+Item3.addItem(ItemID.koin_1, 0.01, {max:1});
+Item3.addItem(ItemID.bookxp, 0.01, {max: 2})
 //железо
 Item3.addItem(306, 0.15, {max:1});
 Item3.addItem(307, 0.08, {max:1});
@@ -2580,7 +2376,7 @@ Item3.registerRecipeViewer("Generate3", "генерация предметов")
 let Item5 = new ItemGenerate();
 Item5.addItem(264, 0.3, {max:3});
 Item5.addItem(266, 0.5, {max:5});
-Item5.addItem(265, 0.4, {max:10});
+Item5.addItem(265, 1, {max:10});
 Item5.addItem(372, 0.10, {max:5});
 Item5.addItem(384, 0.10, {max:11});
 Item5.addItem(399, 0.01, {max:1});
@@ -2589,20 +2385,15 @@ Item5.registerRecipeViewer("Generate5", "генерация предметов")
 
 let Item6 = new ItemGenerate();
 Item6.addItem(264, 0.1, {max:5});
-
 Item6.addItem(266, 0.4, {max:7});
-
 Item6.addItem(295, 0.8, {max:20});
-
 Item6.addItem(291, 0.9, {max:1});
-
 Item6.addItem(261, 0.8, {max:1});
-
 Item6.addItem(262, 0.4, {max:20});
-
 Item6.addItem(297, 0.8, {max:6});
-
 Item6.addItem(322, 0.05, {max:10});
+Item6.addItem(ItemID.sorcererStaff, 0.1, {max: 1});
+Item6.addItem(ItemID.idal, 0.05, {max:10});
 Item6.registerRecipeViewer("Generate6", "генерация предметов");
 
 
@@ -2624,6 +2415,7 @@ Item.registerUseFunctionForID(ItemID.RitualActivator, function(coords, item, blo
             let te = TileEntity.getTileEntity(coords.x, coords.y, coords.z, bs);
             let obj = Ritual.arr2[i];
             if(te.data.item.id==obj.id){
+                Callback.invokeCallback("RitualDC", player, "update", coords);
                 if(mana.count>=obj.mana){
                     mana.count-=obj.mana;
                     bs.spawnDroppedItem(coords.x, coords.y+1, coords.z, obj.result, 1, 0, null);
@@ -2641,6 +2433,7 @@ Item.registerUseFunctionForID(ItemID.RitualActivator, function(coords, item, blo
                  if(mana.count>=Ritual.obj3[key].obj.mana){
                     let count = Ritual.obj3[key].arr.length - 1;
                     mana.count-=Ritual.obj3[key].obj.mana;
+                    Callback.invokeCallback("RitualDC", player, "enchant", coords);
                     bs.spawnDroppedItem(coords.x, coords.y+1, coords.z, Ritual.obj3[key].arr[Math.floor(Math.random()*count)], 1, 0, null);
                     te.destroyAnimation();
                 }
@@ -2710,6 +2503,130 @@ IDRegistry.genItemID("sapling10");
 Item.createItem("sapling10", "sapling", {name: "sapling", meta: 0}, {stack: 64});
 
 Translation.addTranslation("sapling", {ru: "саженец"});
+
+var Idal = {
+    arr: [],
+    getLevel: function (data){
+        if(data<=100 && data >= 0){
+            return 0;
+        }
+        if(data<=200 && data >= 100){
+            return 1;
+        }
+        if(data<=300 && data >= 200){
+            return 2;
+        }
+        if(data<=400 && data >= 300){
+            return 3;
+        }
+        if(data<=500 && data >= 400){
+            return 4;
+        }
+        if(data<=600 && data >= 500){
+            return 5;
+        }
+        if(data<=700 && data >= 600){
+            return 6;
+        }
+        if(data<=800 && data >= 700){
+            return 7;
+        }
+        if(data<=900 && data >= 800){
+            return 8;
+        }
+        if(data<=999 && data >= 900){
+            return 9;
+        }
+        if(data<=1000 && data >= 1000){
+            return 10;
+        }
+    },
+    register: function (id){
+        Item.setGlint(id, true);
+        Item.setMaxDamage(id, 1000);
+        Item.registerNameOverrideFunction(id, function(item, name) {
+            return name  + "\n " + item.data + "/" + Item.getMaxDamage(item.id) + " \n уровень: "+ Idal.getLevel(item.data);
+        });
+        this.arr.push(id);
+    }
+};
+
+IDRegistry.genItemID("idal"); 
+Item.createItem("idal", "idal", {name: "idal", meta: 0}, {stack: 1});
+Translation.addTranslation("idal", {ru: "идал"});
+
+IDRegistry.genItemID("idalSave"); 
+Item.createItem("idalSave", "idal of conservation", {name: "idal", meta: 0}, {stack: 1});
+Translation.addTranslation("idal of conservation", {ru: "идал сохранения"});
+Idal.register(ItemID.idalSave);
+
+IDRegistry.genItemID("idalGifts"); 
+Item.createItem("idalGifts", "idal gifts", {name: "idal", meta: 0}, {stack: 1});
+Translation.addTranslation("idal gifts", {ru: "идал даров"});
+Idal.register(ItemID.idalGifts);
+
+const cheakItem = function (id, playerId) {
+    if(id && playerId) for(var i = 0;i < 9;i++) {
+        var player = new PlayerActor(playerId);
+        var item = player.getInventorySlot(i);
+        if(item.id == id){
+            return {
+                id: item.id,
+                data: item.data,
+                extra: item.extra,
+                count: item.count,
+                slot: i
+			       };
+		     }
+	   }
+};
+
+Callback.addCallback("ServerPlayerTick", function(player, isPlayerDead){
+    let item = cheakItem(ItemID.idalGifts, player);
+    if(item) if(item.id == ItemID.idalGifts){
+        if(Math.random()<=0.01){
+            let mana = ManaCore.get(player);
+            mana.count += Idal.getLevel(item.data) * 10;
+            manaPlayer[player] = mana;
+            Network.sendToServer("dc.set", manaPlayer);
+        }
+    }
+});
+
+Callback.addCallback("wasteMana", function(player, manaNow, manaWill){
+    let item = cheakItem(ItemID.idalSave, player);
+    if(item){
+        if(item.id == ItemID.idalSave){
+            let spending = manaNow.count - manaWill.count;
+            if(spending>=11){
+                let per1 = spending / 100 * Idal.getLevel(item.data); 
+                per1 = Math.ceil(per1);
+                manaWill.count+=per1;
+                Debug.message("idal save - "+player+" "+per1);
+                manaPlayer[player] = manaWill;
+                Network.sendToServer("dc.set", manaPlayer);
+            }else{
+                manaPlayer[player] = manaWill;
+                Network.sendToServer("dc.set", manaPlayer);
+                Debug.message("set mana player - "+player+" "+JSON.stringify(manaWill, null, true));
+            }
+        }else{
+            manaPlayer[player] = manaWill;
+            Network.sendToServer("dc.set", manaPlayer);
+             Debug.message("set mana player - "+player+" "+JSON.stringify(manaWill, null, true));
+        }
+    }else{
+        manaPlayer[player] = manaWill;
+        Network.sendToServer("dc.set", manaPlayer);
+        Debug.message("set mana player - "+player+" "+JSON.stringify(manaWill, null, true));
+    }
+});
+
+Item.addCreativeGroup("idals", Translation.translate("idals"), [
+    	ItemID.idal,
+    	ItemID.idalSave,
+     ItemID.idalGifts
+]);
 
 
 
@@ -2863,13 +2780,13 @@ IDRegistry.genItemID("glas");
 Item.createItem("glas", "glas", {name: "glas", meta: 0}, {stack: 16});
 
 Translation.addTranslation("glas", {ru: "глаз нежити"});
-
+/*
 IDRegistry.genItemID("poic1"); 
 Item.createItem("poic1", "Search for a flight", {name: "poic", meta: 0}, {stack: 1});
 
 Translation.addTranslation("Search for a flight", {ru: "пояс полёта"});
 
-
+*/
 
 IDRegistry.genItemID("amylet"); 
 Item.createItem("amylet", "Breathing the breath", {name: "amylet", meta: 0}, {stack: 1});
@@ -2902,7 +2819,7 @@ Item.createItem("bookxp", "book xp", {name: "book_xp", meta: 0}, {stack: 64});
 Item.registerUseFunction("bookxp", function(coords, item, block, player){
 delItem(player, item);
 let ac = new PlayerActor(player);
-ac.addExperience(100);
+ac.addExperience(1000);
 });
 
 Translation.addTranslation("book xp", {ru: "книга опыта"});
@@ -2925,6 +2842,8 @@ Item.addCreativeGroup("koin", Translation.translate("Koin"), [
 ]);
 
 Translation.addTranslation("Silver coin", {ru: "серебреная монета"});
+
+
 
 
 
@@ -3232,13 +3151,23 @@ Translation.addTranslation("Svic of the clear day", {ru: "свиток ясно�
 
 Item.registerUseFunction("Scroll6", function(coords, item, block, player){
 let mana = ManaCore.get(player);
-if(mana.count>=2000){
-mana.count-=2000;
+if(mana.count>=1000){
+mana.count-=1000;
 World.setWeather(1);
 ManaCore.set(player, mana);
 }
 }
 );
+
+Recipes.addShaped({id: ItemID.Scroll6, count: 1, data: 0},
+	["**b", "*a*", "b**"], 
+	['a', 340, 0, 'b', 264, 0]);
+
+
+
+
+
+
 
 
 
@@ -3269,6 +3198,11 @@ ManaCore.set(player, mana);
 } 
 }
 );
+
+Recipes.addShaped({id: ItemID.Scroll2, count: 1, data: 0},
+	["**b", "*a*", "b**"], 
+	['a', 340, 0, 'b', 405, 0]);
+
 
 
 
@@ -3350,12 +3284,17 @@ ManaCore.set(player, mana);
 }
 );
 
+Recipes.addShaped({id: ItemID.Scroll4, count: 1, data: 0},
+	["**b", "*a*", "b**"], 
+	['a', 340, 0, 'b', 87, 0]);
+
 Item.addCreativeGroup("sroll", Translation.translate("Sroll"), [
 	ItemID.Scroll6,
  ItemID.Scroll2, 
  ItemID.Scroll4, 
  ItemID.Scroll1,
 ]);
+
 
 
 
@@ -3393,6 +3332,11 @@ ManaCore.set(player, mana);
 }
 }
 );
+
+Recipes.addShaped({id: ItemID.Scroll1, count: 1, data: 0},
+	["**b", "*a*", "b**"], 
+	['a', 340, 0, 'b', 348, 0]);
+
 
 
 
@@ -3432,6 +3376,129 @@ Item.registerUseFunction("stick2", function(coords, item, block, player){
             b.setBlock(coords.x, coords.y, coords.z, 0, 0);
         } 
     }
+});
+
+
+
+
+// file: api/Ritual.js
+
+Ritual.arr2 = [];
+Ritual.addCraft2 = function (id, result, mana){
+    Ritual.arr2.push({id: id, result: result, mana: mana});
+};
+Ritual.get2 = function (id){
+    for(i in Ritual.arr2){
+        if(Ritual.arr2[i].id == id){
+            return Ritual.arr2[i];
+        }
+    }
+};
+Ritual.obj3 = {};
+Ritual.register3 = function (id, mana){
+    Ritual.obj3[id] = {obj: {mana: mana}, arr: []};
+};
+Ritual.addCraft3 = function (id, result){
+    Ritual.obj3[id].arr.push(result);
+};
+Ritual.get3 = function (id){
+    return Ritual.obj3[id];
+};
+
+
+
+
+// file: items/посохи/sorcerer_staff.js
+
+IDRegistry.genItemID("sorcererStaff"); 
+Item.createItem("sorcererStaff", "sorcerer staff", {name: "sorcerer_staff", meta: 0}, {stack: 1});
+Translation.addTranslation("sorcerer staff", {ru: "посох чародея"});
+
+Item.registerUseFunction("sorcererStaff", function(coords, item, block, player){
+    if(block.id == BlockID.blockmetal){
+        for(let i = 0;i<=15;i++){
+            Mp.spawnParticle(PartType.magic, coords.x + Math.random(), coords.y + Math.random(), coords.z + Math.random(), 0, Math.random()/10, 0);
+        }
+        let bs = BlockSource.getDefaultForActor(player);
+        bs.setBlock(coords.x, coords.y, coords.z, BlockID.manaStorage, 0);
+        World.addTileEntity(coords.x, coords.y, coords.z);
+    }
+});
+Item.addCreativeGroup("staff", Translation.translate("staff"), [
+	  ItemID.sorcererStaff,
+	  ItemID.stick2,
+]);
+/*
+name: "mage", 
+magisMax: 100, 
+magis: 5,
+        ProtectionMax: 40,
+        Protection: 0,
+        necromancerMax: 10,⁹
+        necromancer: 0,
+        AspectsMax: 100000,
+        AspectsNow: 5000,
+        Aspects: 0
+*/
+function isItem(ent){
+    
+}
+ModAPI.addAPICallback("AncientWondersAPI", function(api){
+    api.Wands.addStick({
+        id: ItemID.sorcererStaff, 
+        time: 15,
+        texture: {
+            name: "sorcerer_staff"
+        },
+        bonus: {
+            necromancer: -5,
+            Protection: -5,
+            magis: -5,
+            aspects: 100
+        }
+    });
+    api.Wands.addIcon(ItemID.sorcererStaff, "sorcerer_staff", 1);
+    IDRegistry.genItemID("srollAttack"); 
+    Item.createItem("srollAttack", "scroll: attacks \n will hit mobs within a 5 block radius", {name: "sroll", meta: 0}, {stack: 1, isTech: true});
+    
+    Translation.addTranslation("scroll: attacks \n will hit mobs within a 5 block radius", {ru: "свиток: атаки \n отакует мобов в радиусе 5 блоков"});
+   
+    Ritual.register3(ItemID.sroll3, 1000);
+    Ritual.addCraft3(ItemID.sroll3, ItemID.sorcererStaff);
+    
+
+ api.Wands.setPrototype(ItemID.srollAttack, {
+    type: "function", 
+    compatibility: [ItemID.sroll1], 
+    activate: {
+        magis: 15,
+        necromancer: 10
+    },
+    setFunction: function(packet){
+        let mana = ManaCore.get(packet.player);
+        if(mana.count >= 50){
+            mana.count-=50;
+            ManaCore.set(packet.player, mana);
+            let pos = Entity.getPosition(packet.entity);
+            let ents = Entity.getAllInRange(pos, 5);
+            Entity.damageEntity(packet.entity, 5);
+            for(let i in ents){
+			            if(Entity.getTypeName(ents[i])!="minecraft:item<>"){
+                     Entity.damageEntity(ents[i], 5);
+                    pos = Entity.getPosition(ents[i]);
+                    for(let i = 0;i<=5;i++){
+                         Mp.spawnParticle(PartType.magic, pos.x + Math.random(), pos.y + Math.random(), pos.z + Math.random(), 0, Math.random()/10, 0);
+                    }
+                }
+            }
+        }else{
+            Mp.message(packet.player,  "нужна маны 50");
+        }
+    }, 
+    installation: function (player, item){
+        Entity.setCarriedItem(player, item.id, item.count-1, item.data);
+    }
+});
 });
 
 
@@ -3556,6 +3623,42 @@ Entity.setCarriedItem(player, 0, 0, 0);
 
 // file: rai.js
 
+Callback.addCallback("GenerateCustomDimensionChunk", function(chunkX, chunkZ, random, dimensionId){
+    if(dimensionId==rai1.id){
+if (Math.random() <= 0.6){
+        
+        var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 0, 20);
+coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+        if(World.getBlock(coords.x, coords.y, coords.z)==BlockID.stone2) World.setBlock(coords.x, coords.y+1, coords.z, BlockID.kristalLight, 0);
+
+} 
+}
+});
+
+Callback.addCallback("GenerateCustomDimensionChunk", function(chunkX, chunkZ, random, dimensionId){
+    if(dimensionId==rai1.id){
+if (Math.random() <= 0.04){
+        
+        var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 80, 125);
+        GenerationUtils.generateOre(coords.x, coords.y, coords.z, BlockID.stone2, 2, 100, true);
+
+} 
+}
+});
+
+Callback.addCallback("GenerateCustomDimensionChunk", function(chunkX, chunkZ, random, dimensionId){
+    if(dimensionId <= rai1.id){
+        if(Math.random()<=0.03){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 10);
+            coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+           let bs = BlockSource.getDefaultForDimension(dimensionId);
+ Dungeon.setStructure("rai_home.json", coords.x, coords.y, coords.z, 0, dimensionId);
+bs = BlockSource.getCurrentWorldGenRegion();
+bs.spawnEntity(coords.x, coords.y+3, coords.z, "dc:angel");
+} 
+} 
+});
+
 var rai1 = new Dimensions.CustomDimension("rai1", 1345); 
 rai1.setSkyColor(0, 128, 188) 
 rai1.setFogColor(0, 128, 188); 
@@ -3657,10 +3760,20 @@ Callback.addCallback("GenerateCustomDimensionChunk", function(chunkX, chunkZ, ra
 
 Callback.addCallback("GenerateCustomDimensionChunk", function(chunkX, chunkZ, random, dimensionId){
     if(dimensionId == rai1.id){
+        if(Math.random() * 100<=0.4){
+            var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 10);
+            coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
+            Dungeon.setStructure("wood.json", coords.x, coords.y, coords.z, 0);
+} 
+} 
+});
+
+Callback.addCallback("GenerateCustomDimensionChunk", function(chunkX, chunkZ, random, dimensionId){
+    if(dimensionId == rai1.id){
         if(Math.random() * 10<=1){
             var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 5, 10);
             coords = GenerationUtils.findSurface(coords.x, coords.y, coords.z);
-            Dungeon.setStructure("wood2.json", coords.x, coords.y, coords.z, 0);
+            Dungeon.setStructure("dc2_rtualRaijson", coords.x, coords.y, coords.z, 0);
 } 
 } 
 });
@@ -3718,34 +3831,9 @@ Entity.setCarriedItem(player, ItemID.Gem2, 1, 0);
 
 // file: boss.js
 
-function arrow(ent){
-    let v = Entity.getVelocity(ent);
-    let pos = Entity.getPosition(ent);
-    let b = BlockSource.getDefaultForDimension(Entity.getDimension(ent))
-    Entity.moveToAngle(Entity.spawn(pos.x, pos.y + 4, pos.z, 80), Entity.getLookAngle(ent), {speed: 1});
-}
-function tnt(ent){
-    let pos = Entity.getPosition(ent);
-    pos.x += (Math.random()*10)-(Math.random()*10);
-    pos.z += (Math.random()*10)-(Math.random()*10);
-    Entity.spawn(pos.x, pos.y+8, pos.z, 65);
-}
 Item.registerUseFunction("glas", function(coords, item, block, player)
 {
 let b = BlockSource.getDefaultForActor(player);
-let boss = b.spawnEntity(coords.x, coords.y, coords.z, "dc:boss1");
-
-Entity.setPrototype({
-    entity: boss,
-    tick: function (){
-        if(Math.random()<=0.05){
-            arrow(this.entity);
-        }
-        if(Math.random()<=0.001){
-            tnt(this.entity);
-        }
-    }
-});
 
 if(b.getBlockId(coords.x, coords.y, coords.z)==BlockID.altar3){
 if(b.getBlockId(coords.x, coords.y - 1, coords.z)==BlockID.altar1){
@@ -3783,33 +3871,25 @@ b.setBlock(coords.x - 1, coords.y - 1, coords.z - 1, 0, 0)
 } 
 }} 
 );
+Callback.addCallback('EntityDeath', function (entity, attacker, damageType) {
+if(Entity.getTypeName(entity) == "dc:boss0<>"){
+let B = BlockSource.getDefaultForActor(entity);
+let pos = Entity.getPosition(entity);
+if(Math.random()<=0.8){
+B.spawnDroppedItem(pos.x, pos.y+1, pos.z, BlockID.statua, 1, 0, null);
+}
+if(Math.random()<=0.05){
+B.spawnDroppedItem(pos.x, pos.y+1, pos.z, ItemID.clitok1, Math.floor(Math.random()*2), 0, null);
+}
 
-
-
-
-// file: api/Ritual.js
-
-Ritual.arr2 = [];
-Ritual.addCraft2 = function (id, result, mana){
-    Ritual.arr2.push({id: id, result: result, mana: mana});
-};
-Ritual.get2 = function (id){
-    for(i in Ritual.arr2){
-        if(Ritual.arr2[i].id == id){
-            return Ritual.arr2[i];
-        }
+}
+});
+Callback.addCallback("EntityHurt", function (attacker, victim, damageValue, damageType, someBool1, someBool2) {
+    if(Entity.getTypeName(attacker) == "dc:boss0<>"){
+        Entity.addEffect(victim, 15, 1, 100, false, false)
+        Entity.addEffect(victim, 15, 1, 120, false, false)
     }
-};
-Ritual.obj3 = {};
-Ritual.register3 = function (id, mana){
-    Ritual.obj3[id] = {obj: {mana: mana}, arr: []};
-};
-Ritual.addCraft3 = function (id, result){
-    Ritual.obj3[id].arr.push(result);
-};
-Ritual.get3 = function (id){
-    return Ritual.obj3[id];
-};
+});
 
 
 
@@ -3834,6 +3914,7 @@ Callback.addCallback("EntityInteract", function (entity, player) {
         for(i in Entity.tradeArr){
             let obj = Entity.tradeArr[i];
             if(item.id == obj.item.id && item.count >= obj.item.count){
+                if(DA) ac.give(player,  "DungeonAchievement", "trade");
                 let count = Math.floor(Math.random()*(obj.count.min))+obj.count.min;
                 bs.spawnDroppedItem(coords.x, coords.y, coords.z, obj.result.id, count, obj.result.data, null);
                 delItem(player, {id: obj.item.id, count: item.count-(obj.item.count-1), data: obj.item.data});
@@ -3847,16 +3928,219 @@ Callback.addCallback("EntityInteract", function (entity, player) {
 
 // file: mods.js
 
+if(config.debug.prohibitedItems){
+    Item.addToCreative(BlockID.sap, 1, 0, null);
+    Item.addToCreative(BlockID.trava, 1, 0, null);
+    Item.addToCreative(BlockID.a0, 1, 0, null);
+    Item.addToCreative(BlockID.a1, 1, 0, null);
+    Item.addToCreative(BlockID.kristaldirt, 1, 0, null);
+    Item.addToCreative(BlockID.kristalFire, 1, 0, null);
+    Item.addToCreative(BlockID.kristalwind, 1, 0, null);
+    Item.addToCreative(BlockID.kristalLight, 1, 0, null);
+    Item.addToCreative(BlockID.brickkey, 1, 0, null);
+    Item.addToCreative(BlockID.brick3, 1, 0, null);
+    Item.addCreativeGroup("prohibited", Translation.translate("prohibited"), [
+	      BlockID.sap,
+	      BlockID.trava,
+	      BlockID.a0,
+	      BlockID.a1,
+	      BlockID.kristaldirt,
+	      BlockID.kristalFire,
+	      BlockID.kristalwind,
+	      BlockID.kristalLight,
+	      BlockID.brickkey,
+	      BlockID.brick3
+    ]);
+}
+
+
 ModAPI.registerAPI("DungeonAPI", {
     ManaCore: ManaCore,
     Ritual: Ritual,
     Debug: Debug,
     Mp: Mp
 });
-let RV;
+let ac;
+ModAPI.addAPICallback("AchievementsAPI", function(api){
+    DA = true;
+    ac = api.AchievementAPI;
+	api.AchievementAPI.registerGroup({
+        uid: "DungeonAchievement",
+        name: "Dungeon craft",
+        width: 600,
+        height: 600,
+        size: 100,
+        background: "stone",
+        icon: {
+            id: BlockID.grass2
+        }
+    });
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "visitRai",
+        name: Translation.translate("new world"),
+        description: Translation.translate("visit paradise"),
+        column: 1,
+        row: 2,
+        icon: {
+            id: ItemID.Gem
+        }
+    });
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "visitRai2",
+        name: Translation.translate("conqueror of worlds"),
+        description: Translation.translate("survive in paradise and get out"),
+        column: 1,
+        row: 3,
+        parent: "visitRai",
+        icon: {
+            id: ItemID.GemEarth
+        }
+    });
+    
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "oreRai",
+        name: Translation.translate("mysterious thing"),
+        description: Translation.translate("get the ore of paradise"),
+        column: 3,
+        row: 3,
+        parent: "visitRai",
+        icon: {
+            id: ItemID.clitok
+        }
+    });
+    
+   api.AchievementAPI.register("DungeonAchievement", {
+        uid: "trade",
+        name: Translation.translate("full of paradise?"),
+        description: Translation.translate("trade with an angel"),
+        column: 4,
+        row: 2,
+        parent: "visitRai",
+        icon: {
+            id: ItemID.koin_1
+        }
+    });
+   
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "manaMax",
+        name: Translation.translate("powerful magician"),
+        description: Translation.translate("pump your mana pool to 100,000"),
+        column: 5,
+        row: 1,
+        type: "challenge",
+        parent: "trade",
+        icon: {
+            id: ItemID.DarkSphere
+        }
+    });
+    
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "manaMax2",
+        name: Translation.translate("powerful magician"),
+        description: Translation.translate("pump your mana pool to 1,000,000"),
+        column: 6,
+        row: 1,
+        type: "challenge",
+        parent: "trade",
+        icon: {
+            id: ItemID.DarkSphere
+        }
+    });
+    
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "killBoss0",
+        name: Translation.translate("bloody eye"),
+        description: Translation.translate("kill the boss of the eye"),
+        column: 1,
+        row: 8,
+        type: "challenge",
+        icon: {
+            id: ItemID.glas
+        }
+    });
+   
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "storageMagic",
+        name: Translation.translate("storing magic"),
+        description: Translation.translate("find a way to store magic"),
+        column: 4,
+        row: 4,
+        parent: "oreRai",
+        icon: {
+            id: ItemID.RitualActivator
+        }
+    });
+    
+    api.AchievementAPI.register("DungeonAchievement", {
+        uid: "Ritual1",
+        name: Translation.translate("old magic"),
+        description: Translation.translate("use new ore and boss statue"),
+        column: 6,
+        row: 4,
+        parent: "storageMagic",
+        icon: {
+            id: BlockID.statua
+        }
+    });
+    
+    
+    Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player) {
+        if(item.id == ItemID.Gem && block.id == BlockID.block1) api.AchievementAPI.give(player,  "DungeonAchievement", "visitRai");
+    });
+    
+    Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player) {
+        if(item.id == ItemID.Gem2 && block.id == BlockID.block1) api.AchievementAPI.give(player,  "DungeonAchievement", "visitRai");
+    });
+    
+    Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player) {
+        if(item.id == ItemID.GemEarth) api.AchievementAPI.give(player,  "DungeonAchievement", "visitRai2");
+    });
+    
+    Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player) {
+        if(item.id == ItemID.GemEarth2) api.AchievementAPI.give(player,  "DungeonAchievement", "visitRai2");
+    });
+    
+    Callback.addCallback("DestroyBlock", function (coords, block, player) {
+        if(block.id==BlockID.ore) api.AchievementAPI.give(player,  "DungeonAchievement", "oreRai");
+    });
+    
+
+    Callback.addCallback("ItemUse", function(coords, item, block, isExternal, player) {
+        if(item.id == ItemID.DarkSphere && ManaCore.get(player).countMax >= 100000) api.AchievementAPI.give(player,  "DungeonAchievement", "manaMax");
+        if(item.id == ItemID.DarkSphere && ManaCore.get(player).countMax >= 1000000) api.AchievementAPI.give(player,  "DungeonAchievement", "manaMax2");
+    });
+    
+    Callback.addCallback("EntityDeath", function (entity, attacker, damageType) {
+        if(Entity.getTypeName(entity) == "dc:boss0<>" && Player.isPlayer(attacker)) api.AchievementAPI.give(attacker,  "DungeonAchievement", "killBoss0");
+    });
+    
+    
+    Translation.addTranslation("new world", {ru: "иной мир"});
+    Translation.addTranslation("visit paradise", {ru: "посетите рай"});
+    Translation.addTranslation("conqueror of worlds", {ru: "покоритель миров"});
+    Translation.addTranslation("survive in paradise and get out", {ru: "выживите в раю и выберетесь"});
+    Translation.addTranslation("mysterious thing", {ru: "загадочная вещь"});
+    Translation.addTranslation("get the ore of paradise", {ru: "добудьте руду рая"});
+    Translation.addTranslation("full of paradise?", {ru: "насатый рая?"});
+    Translation.addTranslation("trade with an angel", {ru: "по торгуйте с ангелом"});
+    Translation.addTranslation("powerful magician", {ru: "мощный маг"});
+    Translation.addTranslation("pump your mana pool to 100,000", {ru: "прокачайте запас маны до 100.000"});
+    Translation.addTranslation("pump your mana pool to 1,000,000", {ru: "прокачайте запас маны до 1,000,000"});
+    Translation.addTranslation("bloody eye", {ru: "кровавое око"});
+    Translation.addTranslation("kill the boss of the eye", {ru: "убейте босса око"});
+    Translation.addTranslation("old magic", {ru: "древняя магия"});
+    Translation.addTranslation("use new ore and boss statue", {ru: "используете новую руду и статую босса"});
+    Translation.addTranslation("storing magic", {ru: "хранение магии"});
+    Translation.addTranslation("find a way to store magic", {ru: "найдите способ хранить магию"});
+    Translation.addTranslation("improvement time", {ru: "время улучшения"});
+    Translation.addTranslation("use all basic rituals", {ru: "используете все базовые ритуалы"});
+});
+Callback.addCallback("RitualDC", function(player, type, coords){
+    if(DA && type == "statua") ac.give(player,  "DungeonAchievement", "Ritual1");
+});
 ModAPI.addAPICallback("RecipeViewer", function(api){
     Callback.addCallback("LevelLoaded", function(){
-        RV = api.Core;
+        let RV = api.Core;
         let recipe = Ritual.arr1;
         let recipeList = [];
         let result;
@@ -4031,6 +4315,11 @@ Callback.addCallback("ModsLoaded", function () {
     Ritual.addCraft3(ItemID.Drune0, ItemID.Drune2);
     Ritual.addCraft3(ItemID.Drune0, ItemID.Drune3);
     Ritual.addCraft3(ItemID.Drune0, ItemID.Drune4);
+    Ritual.register3(ItemID.idal, 5000);
+    Ritual.addCraft3(ItemID.idal, ItemID.idalSave);
+    Ritual.addCraft3(ItemID.idal, ItemID.idalGifts);
+
+
     
     Ritual.addCraft2(ItemID.armor5, ItemID.armor1, 40000);
     Ritual.addCraft2(ItemID.armor6, ItemID.armor2, 40000);
@@ -4077,7 +4366,7 @@ Callback.addCallback("ModsLoaded", function () {
          }
          ManaCore.set(player, mana);
      });
-     Ritual.addCraft1(ItemID.poic1, {
+     /*Ritual.addCraft1(ItemID.poic1, {
         xp: ItemID.gotovka,
         xm: ItemID.Gem,
         zp: ItemID.clitok,
@@ -4104,7 +4393,7 @@ Callback.addCallback("ModsLoaded", function () {
         xp: ItemID.clitok,
         xm: ItemID.clitok,
         mana: 5000
-     }, function(player, x, y, z){});
+     }, function(player, x, y, z){});*/
      Ritual.addCraft1(ItemID.clitok, {
         zp: ItemID.crystalearth,
         zm: ItemID.crystalearth,
@@ -4140,6 +4429,11 @@ Callback.addCallback("ModsLoaded", function () {
         zm: ItemID.clitok,
         mana: 5000
      }, function(player, x, y, z){});
+     
+     Ritual.addGrowth(BlockID.kristalFire);
+     Ritual.addGrowth(BlockID.kristaldirt);
+     Ritual.addGrowth(BlockID.kristalwind);
+     Ritual.addGrowth(BlockID.kristalLight);
 });
 
 
@@ -4165,29 +4459,34 @@ Recipes.addShaped({id: 58, count: 1, data: 0},
 Recipes.addShaped({id: 54, count: 1, data: 0}, 
 	["aaa", "a*a", "aaa"],
 	['a', BlockID.board, 0]);
-/*
-Recipes.addShaped({id: BlockID.CloneAltar1, count: 1, data: 0}, 
-	["*a*", "aba", "*a*"],
-	['a', ItemID.clitok, 0, 'b', BlockID.blockmetal, 0]);
-*/
+
 Recipes.addShaped({id: BlockID.rityal1, count: 1, data: 0}, 
-	["***", "aba", "aaa"],
-	['a', ItemID.clitok, 0, 'b', BlockID.blockmetal, 0]);
+	["aga", "aba", "aba"],
+	['a', ItemID.clitok, 0, 'b', 1, 0, 'g', 264, 0]);
 
 Recipes.addShaped({id: BlockID.brick2, count: 8, data: 0}, 
 	["bbb", "bab", "bbb"],
 	['a', ItemID.clitok, 0, 'b', BlockID.stone2, 0]);
-/*
+
 Recipes.addShaped({id: BlockID.ritualGL, count: 1, data: 0}, 
-	["bab", "bab", "aaa"],
-	['b', ItemID.clitok, 0, 'a', BlockID.blockmetal, 0]);*/
+	["gag", "bab", "bab"],
+	['b', ItemID.clitok, 0, 'a', 1, 0, 'g', ItemID.clitok1, 0]);
+
+Recipes.addShaped({id: BlockID.MagicStorage, count: 1, data: 0}, 
+	["gbg", "bab", "gbg"],
+	['b', ItemID.clitok, 0, 'a', 1, 0, 'g', ItemID.clitok1, 0]);
+
 Recipes.addShaped({id: BlockID.gubok1, count: 1, data: 0}, 
-	["bbb", "aba", "aba"],
-	['a', ItemID.clitok, 0, 'b', BlockID.blockmetal, 0]);
+	["aaa", "aga", "aga"],
+	['a', ItemID.clitok, 0,'g', 1, 0,]);
 	Recipes.addShaped({id: BlockID.gubok2, count: 1, data: 0}, 
-	["aba", "aba", "bbb"],
-	['a', ItemID.clitok, 0, 'b', BlockID.blockmetal, 0]);
+["aga", "aga", "aga"],
+	['a', ItemID.clitok, 0,'g', 1, 0,]);
 });
+
+
+
+
 
 
 
